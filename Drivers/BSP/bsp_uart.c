@@ -5,7 +5,10 @@
       生成日期: 2016.11.01
       作    者：like
       功能说明：串口模块
-      其他说明： 
+      其他说明：1. 串口1用于调试，isp烧录程序
+                2. 串口2用于485通信
+                3. 串口3用于esp8266模块
+                4. 串口4用于组态屏
       修改记录：
 *******************************************************************************/
 #include <FreeRTOS.h>
@@ -15,39 +18,47 @@
 #include <stdio.h>
 #include <stdarg.h> 
 
-
 #include "stm32f1xx_hal.h"
 #include "bsp_uart.h"
 
-#define RT_CONSOLEBUF_SIZE	128
+/* 串口1调试信息发送缓存 */
+#define RT_CONSOLEBUF_SIZE  128
 
+/* 调试口使能标志 */
+char debug_en = 1;
+
+/* shell功能打印口使能标志 */
+char print_en = 0;
+
+
+/* 串口操作句柄 */
 UART_HandleTypeDef Uart1Handle;
 UART_HandleTypeDef Uart2Handle;
 UART_HandleTypeDef Uart3Handle;
 UART_HandleTypeDef Uart4Handle;
-UART_HandleTypeDef Uart5Handle;
 
+/* 串口中断发送完成标志 */
 __IO ITStatus Uart1Ready = RESET;
 __IO ITStatus Uart2Ready = RESET;
 __IO ITStatus Uart3Ready = RESET;
 __IO ITStatus Uart4Ready = RESET;
-__IO ITStatus Uart5Ready = RESET;
 
-
+/* 串口中断接收缓存区 */
 char uart1_rx_buff[UART1_RX_BUFF_SIZE];
 char uart2_rx_buff[UART2_RX_BUFF_SIZE];
 char uart3_rx_buff[UART3_RX_BUFF_SIZE];
 char uart4_rx_buff[UART4_RX_BUFF_SIZE];
-char uart5_rx_buff[UART5_RX_BUFF_SIZE];
+
 
 /******************************************************************************
-    功能说明：无
-    输入参数：无
+    功能说明：串口初始化
+    输入参数：uart_no 串口号 bound 波特率
     输出参数：无
     返 回 值：无
 *******************************************************************************/ 
 void uart_init(char uart_no, uint32_t bound)
 {  
+    /* 串口1初始化 */
     if (uart_no == UART_1)
     {    
         Uart1Handle.Instance        = USART1;
@@ -63,7 +74,8 @@ void uart_init(char uart_no, uint32_t bound)
         
         Uart1Ready = RESET; 
     }
-       
+    
+    /* 串口2初始化 */
     if (uart_no == UART_2)
     {    
         Uart2Handle.Instance        = USART2;
@@ -80,6 +92,7 @@ void uart_init(char uart_no, uint32_t bound)
         Uart2Ready = RESET; 
     } 
     
+    /* 串口3初始化 */
     if (uart_no == UART_3)
     {    
         Uart3Handle.Instance        = USART3;
@@ -95,12 +108,28 @@ void uart_init(char uart_no, uint32_t bound)
         
         Uart3Ready = RESET; 
     }     
-    
+
+    /* 串口4初始化 */
+    if (uart_no == UART_4)
+    {    
+        Uart4Handle.Instance        = UART4;
+        Uart4Handle.Init.BaudRate   = bound;
+        Uart4Handle.Init.WordLength = UART_WORDLENGTH_8B;
+        Uart4Handle.Init.StopBits   = UART_STOPBITS_1;
+        Uart4Handle.Init.Parity     = UART_PARITY_NONE;
+        Uart4Handle.Init.HwFlowCtl  = UART_HWCONTROL_NONE;
+        Uart4Handle.Init.Mode       = UART_MODE_TX_RX;
+        
+        HAL_UART_DeInit(&Uart4Handle);
+        HAL_UART_Init(&Uart4Handle);
+        
+        Uart4Ready = RESET; 
+    }     
 }
 
 
 /******************************************************************************
-    功能说明：无
+    功能说明：串口清除
     输入参数：无
     输出参数：无
     返 回 值：无
@@ -142,13 +171,32 @@ int uart_clear(char uart_no)
             return -1;
         }
     }       
+
+    if (uart_no == UART_4)
+    {
+        memset(uart4_rx_buff, 0, UART4_RX_BUFF_SIZE);
+        
+        if (HAL_UART_Receive_IT(&Uart4Handle, 
+                                (uint8_t *)uart4_rx_buff, 
+                                UART4_RX_BUFF_SIZE) != HAL_OK)
+        {
+            return -1;
+        }
+    } 
     
     return 0;
 }
 
 
+/******************************************************************************
+    功能说明：串口数据发送
+    输入参数：无
+    输出参数：无
+    返 回 值：无
+*******************************************************************************/ 
 int bsp_uart_send(char uart_no, char *buff, int len)
 {
+    /* 串口1发送 */
     if (uart_no == UART_1)
     {    
         if (HAL_UART_Transmit_IT(&Uart1Handle, 
@@ -166,6 +214,7 @@ int bsp_uart_send(char uart_no, char *buff, int len)
         Uart1Ready = RESET;       
     }
     
+    /* 串口2发送 */
     if (uart_no == UART_2)
     {    
         if (HAL_UART_Transmit_IT(&Uart2Handle, 
@@ -184,7 +233,8 @@ int bsp_uart_send(char uart_no, char *buff, int len)
         
         
     }
-
+    
+    /* 串口3发送 */
     if (uart_no == UART_3)
     {    
         if (HAL_UART_Transmit_IT(&Uart3Handle, 
@@ -201,13 +251,36 @@ int bsp_uart_send(char uart_no, char *buff, int len)
         
         Uart3Ready = RESET;                 
     }
-
+    
+    /* 串口4发送 */
+    if (uart_no == UART_4)
+    {    
+        if (HAL_UART_Transmit_IT(&Uart4Handle, 
+                                (uint8_t *)buff, 
+                                len) != HAL_OK)
+        {
+            return -1;
+        }
+        
+        while (Uart4Ready != SET)
+        {
+            ;
+        }
+        
+        Uart4Ready = RESET;                 
+    }
+    
     return 0;    
 }
 
 
 
-
+/******************************************************************************
+    功能说明：串口数据接收
+    输入参数：无
+    输出参数：无
+    返 回 值：无
+*******************************************************************************/
 int bsp_uart_receive(char uart_no, char *buff, int size)
 {
     int len = 0;
@@ -215,7 +288,8 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
     UART_HandleTypeDef *pUartHandle;
     int uart_rx_buff_size = 0;
     char *uart_rx_buff = 0;
-       
+    
+    /* 串口1接收 */
     if (uart_no ==UART_1)
     {
         uart_rx_buff_size = UART1_RX_BUFF_SIZE;
@@ -223,6 +297,7 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
         uart_rx_buff = uart1_rx_buff;
     }
     
+    /* 串口2接收 */
     else if (uart_no ==UART_2)
     {
         uart_rx_buff_size = UART2_RX_BUFF_SIZE;
@@ -230,6 +305,7 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
         uart_rx_buff = uart2_rx_buff;
     }    
     
+    /* 串口3接收 */
     else if (uart_no ==UART_3)
     {
         uart_rx_buff_size = UART3_RX_BUFF_SIZE;
@@ -237,7 +313,14 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
         uart_rx_buff = uart3_rx_buff;
     }        
     
-    
+    /* 串口4接收 */
+    else if (uart_no ==UART_4)
+    {
+        uart_rx_buff_size = UART4_RX_BUFF_SIZE;
+        pUartHandle = &Uart4Handle;
+        uart_rx_buff = uart4_rx_buff;
+    } 
+   
     if (buff == NULL)
     {
         return -1;
@@ -295,8 +378,8 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
 
 
 /******************************************************************************
-    功能说明：无
-    输入参数：无
+    功能说明：调试口发送字符
+    输入参数：buff 发送缓存
     输出参数：无
     返 回 值：无
 *******************************************************************************/
@@ -314,13 +397,23 @@ int bsp_uart_send_str(char *buff)
 }
 
 
-
+/******************************************************************************
+    功能说明：shell打印
+    输入参数：fmt 打印数据
+    输出参数：无
+    返 回 值：无
+*******************************************************************************/
 void kprintf(const char *fmt, ...)
 {
     va_list args;
     unsigned long length;
     static char rt_log_buf[RT_CONSOLEBUF_SIZE];
-
+    
+    if (!print_en)
+    {
+        return;
+    }
+    
     va_start(args, fmt);
     length = vsnprintf(rt_log_buf, sizeof(rt_log_buf) - 1, fmt, args);
     if (length > RT_CONSOLEBUF_SIZE - 1)
@@ -332,6 +425,12 @@ void kprintf(const char *fmt, ...)
 }
 
 
+/******************************************************************************
+    功能说明：调试打印口初始化
+    输入参数：无
+    输出参数：无
+    返 回 值：无
+*******************************************************************************/
 void debug_init(void)
 {
     uart_init(UART_1, 115200);  
@@ -339,12 +438,23 @@ void debug_init(void)
 }
 
 
+/******************************************************************************
+    功能说明：调试打印
+    输入参数：fmt 打印数据
+    输出参数：无
+    返 回 值：无
+*******************************************************************************/
 void debug(const char *fmt, ...)
 {
     va_list args;
     unsigned long length;
     char buff[RT_CONSOLEBUF_SIZE] = {0};
-
+    
+    if (!debug_en)
+    {
+        return;
+    }
+    
     va_start(args, fmt);
     length = vsnprintf(buff, sizeof(buff) - 1, fmt, args);
     if (length > RT_CONSOLEBUF_SIZE - 1)

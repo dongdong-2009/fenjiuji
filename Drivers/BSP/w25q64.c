@@ -18,7 +18,7 @@
 #include "w25q64.h" 
 
 
-#define	SPI_FLASH_CS_LOW   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET)  //选中FLASH	
+ #define	SPI_FLASH_CS_LOW   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET)  //选中FLASH	
 #define	SPI_FLASH_CS_HIGH  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET)
 #define delay(x) vTaskDelay(x);
 

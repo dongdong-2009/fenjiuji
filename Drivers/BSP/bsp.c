@@ -77,7 +77,7 @@ void bsp_init(void)
      
     debug_init();
     
-    //SPI_Flash_Init();
+    SPI_Flash_Init();
     
     bsp_rtc_init(); 
 }
