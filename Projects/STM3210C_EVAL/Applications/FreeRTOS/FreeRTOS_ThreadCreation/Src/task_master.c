@@ -28,7 +28,6 @@ void task_master(void *pvParameters)
     for( ;; )
 	{                   
         
-        
         vTaskDelay(1000);
 	}       
 }

@@ -32,7 +32,7 @@
 
 
 /******************************************************************************
-    功能说明：
+    功能说明：打印程序信息
     输入参数：无
     输出参数：无
     返 回 值：无
@@ -66,7 +66,8 @@ int main(void)
 {   
     /* 低层硬件初始化 */
     bsp_init();
-       
+    
+    /* 打印程序运行信息 */
     show_msg();
        
     /* 创建以太网模块管理任务 */
@@ -89,10 +90,7 @@ int main(void)
     xTaskCreate(task_shell, "shell", configMINIMAL_STACK_SIZE, NULL, 2, NULL);  
     main_print("create shell task......OK\r\n");
     
-    /* Start scheduler */
+    /* 任务调度 */
     vTaskStartScheduler();
-
-    /* We should never get here as control is now taken by the scheduler */
-    for (;;);
 }
 

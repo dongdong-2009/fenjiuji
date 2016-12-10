@@ -22,7 +22,7 @@
 
 const char server_ip[4] = {192, 168, 1, 101};
 const char server_port[2] = {0x1F, 0x51}; /* 8017*/
-const char client_port[2] = {0x1F, 0x41}; /* 8001*/
+const char client_port[2] = {0x1F,0x41}; /* 8001*/
 
 const char terminal_ip[4] = {192, 168, 1, 100};
 const char mac[6] = {0x22, 0x22, 0x11, 0x11, 0x11, 0x2};
