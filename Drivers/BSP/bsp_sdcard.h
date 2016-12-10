@@ -182,8 +182,10 @@ typedef struct
    
 
 
-    
-    
-    
-    
+extern uint8_t BSP_SD_Init(void);       
+extern uint8_t BSP_SD_GetStatus(void);
+extern uint8_t BSP_SD_ReadBlocks(uint32_t* p32Data, uint64_t ReadAddr, uint16_t BlockSize, uint32_t NumberOfBlocks);
+extern uint8_t BSP_SD_WriteBlocks(uint32_t* p32Data, uint64_t WriteAddr, uint16_t BlockSize, uint32_t NumberOfBlocks);
+extern uint8_t BSP_SD_GetCardInfo(SD_CardInfo *pCardInfo);
+  
 #endif /*  _ESP_SDCARD_H */
