@@ -87,8 +87,8 @@ int main(void)
     main_print("create LCD task......OK\r\n");
     
     /* 创建shell任务 */
-    xTaskCreate(task_shell, "shell", configMINIMAL_STACK_SIZE, NULL, 2, NULL);  
-    main_print("create shell task......OK\r\n");
+    //xTaskCreate(task_shell, "shell", configMINIMAL_STACK_SIZE, NULL, 2, NULL);  
+    //main_print("create shell task......OK\r\n");
     
     /* 任务调度 */
     vTaskStartScheduler();

@@ -92,7 +92,7 @@
 #if defined(USE_STM3210C_EVAL)
   #define HSE_VALUE    ((uint32_t)25000000) /*!< Value of the External oscillator in Hz */
 #else
-  #define HSE_VALUE    ((uint32_t)12000000) /*!< Value of the External oscillator in Hz */
+  #define HSE_VALUE    ((uint32_t)8000000) /*!< Value of the External oscillator in Hz */
 #endif
 #endif /* HSE_VALUE */
 

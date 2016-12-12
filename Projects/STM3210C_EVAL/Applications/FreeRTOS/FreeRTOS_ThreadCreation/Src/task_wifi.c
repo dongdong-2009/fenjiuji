@@ -249,7 +249,6 @@ static int wifi_ap_tcp_server(struct wifi_param *param)
     }
     
     uart_init(UART_1, 115200);    
-    uart_clear(UART_1);
     
     while (1)
     {

@@ -32,7 +32,7 @@ extern UART_HandleTypeDef Uart4Handle;
 extern UART_HandleTypeDef Uart5Handle;
 
 
-extern void uart_init(char uart_no, uint32_t bound);
+extern int uart_init(char uart_no, uint32_t bound);
 extern int bsp_uart_send(char uart_no, char *txbuf, int len);
 extern int bsp_uart_receive(char uart_no, char *buff, int size);
 extern int uart_clear(char uart_no);

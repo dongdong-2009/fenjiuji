@@ -137,7 +137,6 @@ int esp8266_at_cmd_send(char *buff)
     
     /* 每一次发送命令就对串口进行初始化，防止串口发出错 */
     uart_init(UART_3, 115200);    
-    uart_clear(UART_3);
     
     /* 将数据从串口发出去 */
     ret = esp8266_send_byte(buff, len);
@@ -202,8 +201,7 @@ int esp8266_at_cmd_receive(char *buff, int size, int ovt)
         esp8266_print(buff);
         
         /* 每一次发送命令就对串口进行初始化，防止串口发出错 */
-        uart_init(UART_3, 115200);    
-        uart_clear(UART_3);       
+        uart_init(UART_3, 115200);      
     }
    
     return rxlen;
@@ -841,9 +839,6 @@ int esp8266_init(void)
     /* 通信口初始化 */
     uart_init(UART_3, 115200);
     
-    /* 通信口数据清空 */
-    uart_clear(UART_3);
-    
     /* 模块参数恢复出厂 */
     at_exe_cmd_restore();
     
@@ -1057,8 +1052,7 @@ static int at_query_cmd_server_connet(void)
         }
         
         /* 每一次发送命令就对串口进行初始化，防止串口发出错 */
-        uart_init(UART_3, 115200);    
-        uart_clear(UART_3);               
+        uart_init(UART_3, 115200);                   
     }
     
     return -1;

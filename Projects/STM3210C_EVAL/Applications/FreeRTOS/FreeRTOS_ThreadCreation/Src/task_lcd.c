@@ -44,10 +44,7 @@ static struct lcd_str lcd;
 static void lcd_init(void)
 {
     /* 通信口初始化 */
-    uart_init(UART_2, LCD_BOUND);
-    
-    /* 通信口数据清空 */
-    uart_clear(UART_2);   
+    uart_init(UART_2, LCD_BOUND); 
 }
 
 
@@ -113,7 +110,6 @@ int lcd_send(char *buff)
     
     /* 每一次发送命令就对串口进行初始化，防止串口发出错 */
     uart_init(UART_2, LCD_BOUND);    
-    uart_clear(UART_2);
     
     /* 将数据从串口发出去 */
     /* 发送数据到串口*/

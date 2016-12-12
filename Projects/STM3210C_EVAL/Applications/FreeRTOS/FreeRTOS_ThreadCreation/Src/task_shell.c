@@ -452,7 +452,6 @@ static void shell_push_history(struct finsh_shell *shell)
 void shell_init(void)
 {
     uart_init(UART_1, 115200);  
-    uart_clear(UART_1);
 }
 
 
