@@ -180,7 +180,7 @@ int esp8266_at_cmd_receive(char *buff, int size, int ovt)
 {
     int len = 0;
     int rxlen = 0;
-    int time = ovt;
+    int time = ovt / 50;
     
     while (--time > 0)
     {   
@@ -189,10 +189,10 @@ int esp8266_at_cmd_receive(char *buff, int size, int ovt)
         if (len > 0)
         {
             rxlen += len;
-            time = ovt;
+            time = ovt / 50;
         }
                
-        esp8266_delay(1);
+        esp8266_delay(50);
     }
     
     if (rxlen > 0)
@@ -263,7 +263,7 @@ static int at_exe_cmd_gmr(void)
     }
     
     /* 接收AT命令处理 */
-    len = esp8266_at_cmd_receive(rxbuf, 16, 300);
+    len = esp8266_at_cmd_receive(rxbuf, 64, 300);
     if (len > 0)
     {
         if (strstr(rxbuf, "AT version") != NULL)
@@ -333,8 +333,10 @@ static int at_exe_cmd_cwmode(char mode)
         return -1;
     }
     
+    memset(buff, 0, 64);
+    
     /* 接收AT命令处理 */
-    len = esp8266_at_cmd_receive(buff, 16, 500);
+    len = esp8266_at_cmd_receive(buff, 64, 500);
     if (len > 0)
     {
         if (strstr(buff, "OK\r\n") != NULL)
@@ -462,7 +464,7 @@ static int at_exe_cmd_cwsap(char *ssid, char *psw, char chl, char ecn)
 {
     int ret;
     char buff[64] = {0};
-    char len = 0, rxlen = 0;
+    char len = 0;
    
     /* 发送AT命令 */
     sprintf(buff, "AT+CWSAP_CUR=\"%s\",\"%s\",%d,%d\r\n", ssid, psw, chl, ecn);
@@ -475,11 +477,9 @@ static int at_exe_cmd_cwsap(char *ssid, char *psw, char chl, char ecn)
     memset(buff, 0, 64);
     
     /* 接收AT命令处理 */
-    len = esp8266_at_cmd_receive(buff + rxlen, 64 - rxlen, 5000);
+    len = esp8266_at_cmd_receive(buff, 64, 1000);
     if (len > 0)
-    {
-        rxlen += len;
-        
+    {       
         if (strstr(buff, "OK") != NULL)
         {
             return 0;

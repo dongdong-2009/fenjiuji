@@ -75,7 +75,7 @@ int main(void)
     main_print("create ethernet task......OK\r\n");
     
     /* 创建wifi模块管理任务 */
-    xTaskCreate(task_wifi, "wifi", configMINIMAL_STACK_SIZE, NULL, 2, NULL);
+    xTaskCreate(task_wifi, "wifi", configMINIMAL_STACK_SIZE*2, NULL, 2, NULL);
     main_print("create wifi task......OK\r\n"); 
     
     /* 创建modbus任务 */

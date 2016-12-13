@@ -317,6 +317,7 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
     UART_HandleTypeDef *pUartHandle;
     int uart_rx_buff_size = 0;
     char *uart_rx_buff = 0;
+    IRQn_Type IRQn;
     
     /* 串口1接收 */
     if (uart_no ==UART_1)
@@ -324,6 +325,7 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
         uart_rx_buff_size = UART1_RX_BUFF_SIZE;
         pUartHandle = &Uart1Handle;
         uart_rx_buff = uart1_rx_buff;
+        IRQn = USART1_IRQn;
     }
     
     /* 串口2接收 */
@@ -332,6 +334,7 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
         uart_rx_buff_size = UART2_RX_BUFF_SIZE;
         pUartHandle = &Uart2Handle;
         uart_rx_buff = uart2_rx_buff;
+        IRQn = USART2_IRQn;
     }    
     
     /* 串口3接收 */
@@ -340,14 +343,16 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
         uart_rx_buff_size = UART3_RX_BUFF_SIZE;
         pUartHandle = &Uart3Handle;
         uart_rx_buff = uart3_rx_buff;
+        IRQn = USART3_IRQn;
     }        
     
     /* 串口4接收 */
-    else if (uart_no ==UART_4)
+    else /* if (uart_no ==UART_4) */
     {
         uart_rx_buff_size = UART4_RX_BUFF_SIZE;
         pUartHandle = &Uart4Handle;
         uart_rx_buff = uart4_rx_buff;
+        IRQn = UART4_IRQn;
     } 
    
     if (buff == NULL)
@@ -363,6 +368,8 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
         /* 取走部分数据 */
         if (rxlen > size)
         {
+            HAL_NVIC_EnableIRQ(IRQn);
+            
             /* 将数据取走 */
             len = size;       
             memcpy(buff, uart_rx_buff, len);                    
@@ -370,34 +377,21 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
             /* 将剩余的数据搬到最前面 */
             rxlen -= len;
             memcpy(uart_rx_buff, uart_rx_buff + len, rxlen);
-             
-            uart_init(uart_no, 115200);
+            pUartHandle->RxXferCount = uart_rx_buff_size - rxlen;
             
-            /* 调整接收缓存 */
-            if (HAL_UART_Receive_IT(pUartHandle, 
-                            (uint8_t *)uart_rx_buff + rxlen, 
-                            uart_rx_buff_size - rxlen) != HAL_OK)
-            {
-                return -1;
-            }
+            HAL_NVIC_EnableIRQ(IRQn);
+
         }
         
         /* 取全部数据 */
         else
         {
+            HAL_NVIC_EnableIRQ(IRQn);
             len = rxlen;       
             memcpy(buff, uart_rx_buff, rxlen);
             rxlen = 0;
-            
-            uart_init(uart_no, 115200);
-            
-            /* 调整接收缓存 */
-            if (HAL_UART_Receive_IT(pUartHandle, 
-                            (uint8_t *)uart_rx_buff, 
-                            uart_rx_buff_size) != HAL_OK)
-            {
-                return -1;
-            }
+            pUartHandle->RxXferCount = uart_rx_buff_size;
+            HAL_NVIC_EnableIRQ(IRQn);
         }
     }
   
@@ -419,7 +413,7 @@ int bsp_uart_send_str(char *buff)
     len = strlen(buff);
     if (len <= RT_CONSOLEBUF_SIZE)
     {
-        bsp_uart_send(UART_2, buff, len);
+        bsp_uart_send(UART_1, buff, len);
     }
     
     return 0;
@@ -462,7 +456,7 @@ void kprintf(const char *fmt, ...)
 *******************************************************************************/
 void debug_init(void)
 {
-    uart_init(UART_2, 9600);  
+    uart_init(UART_1, 115200);  
 }
 
 
