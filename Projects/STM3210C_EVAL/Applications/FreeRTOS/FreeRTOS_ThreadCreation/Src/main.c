@@ -71,23 +71,23 @@ int main(void)
     show_msg();
        
     /* 创建以太网模块管理任务 */
-	xTaskCreate(task_ethernet, "eth", configMINIMAL_STACK_SIZE, NULL, 2, NULL);
+	xTaskCreate(task_ethernet, "eth", configMINIMAL_STACK_SIZE*4, NULL, 2, NULL);
     main_print("create ethernet task......OK\r\n");
     
     /* 创建wifi模块管理任务 */
-    xTaskCreate(task_wifi, "wifi", configMINIMAL_STACK_SIZE*2, NULL, 2, NULL);
-    main_print("create wifi task......OK\r\n"); 
+   // xTaskCreate(task_wifi, "wifi", configMINIMAL_STACK_SIZE*2, NULL, 3, NULL);
+    //main_print("create wifi task......OK\r\n"); 
     
     /* 创建modbus任务 */
-    xTaskCreate(task_modbus, "modbus", configMINIMAL_STACK_SIZE, NULL, 2, NULL);    
+    xTaskCreate(task_modbus, "modbus", configMINIMAL_STACK_SIZE, NULL, 4, NULL);    
     main_print("create modbus task......OK\r\n");
     
-    /* 创建lcd任务 */
-    xTaskCreate(task_lcd, "lcd", configMINIMAL_STACK_SIZE, NULL, 2, NULL);        
-    main_print("create LCD task......OK\r\n");
-    
-    /* 创建shell任务 */
-    //xTaskCreate(task_shell, "shell", configMINIMAL_STACK_SIZE, NULL, 2, NULL);  
+//    /* 创建lcd任务 */
+//    xTaskCreate(task_lcd, "lcd", configMINIMAL_STACK_SIZE, NULL, 5, NULL);        
+//    main_print("create LCD task......OK\r\n");
+//    
+//    /* 创建shell任务 */
+    //xTaskCreate(task_shell, "shell", configMINIMAL_STACK_SIZE, NULL, 6, NULL);  
     //main_print("create shell task......OK\r\n");
     
     /* 任务调度 */

@@ -66,31 +66,29 @@ int w5500_gpio_init(void)
 {   
     GPIO_InitTypeDef   GPIO_InitStructure;
 
-    /* PC5 --> RESET */
-    __HAL_RCC_GPIOC_CLK_ENABLE();
+    /* PA11 --> RESET */
+    __HAL_RCC_GPIOA_CLK_ENABLE();
     
-     __HAL_RCC_GPIOF_CLK_ENABLE();
-    HAL_GPIO_WritePin(GPIOF, GPIO_PIN_7, GPIO_PIN_SET);
-    
-    
+    //__HAL_RCC_GPIOF_CLK_ENABLE();
+    //HAL_GPIO_WritePin(GPIOF, GPIO_PIN_7, GPIO_PIN_SET);
+      
     GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStructure.Pull  = GPIO_PULLUP;
     GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_MEDIUM;
-    GPIO_InitStructure.Pin = GPIO_PIN_5;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStructure);
+    GPIO_InitStructure.Pin = GPIO_PIN_11;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStructure);
        
-    /* PC4 --> INT */
-    __HAL_RCC_GPIOC_CLK_ENABLE();
+    /* PA12 --> INT */
+    __HAL_RCC_GPIOA_CLK_ENABLE();
 
-    /* Configure PC.4 pin as input floating */
     GPIO_InitStructure.Mode = GPIO_MODE_IT_FALLING;
     GPIO_InitStructure.Pull = GPIO_PULLUP;
-    GPIO_InitStructure.Pin = GPIO_PIN_4;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStructure);
+    GPIO_InitStructure.Pin = GPIO_PIN_12;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStructure);
 
     /* Enable and set EXTI line 0 Interrupt to the lowest priority */
-    HAL_NVIC_SetPriority(EXTI4_IRQn, 2, 0);
-    HAL_NVIC_EnableIRQ(EXTI4_IRQn);    
+    //HAL_NVIC_SetPriority(EXTI4_IRQn, 2, 0);
+    //HAL_NVIC_EnableIRQ(EXTI4_IRQn);    
    
     return 0;
 }
@@ -104,9 +102,9 @@ int w5500_gpio_init(void)
 *******************************************************************************/ 
 void w5500_reset(void)
 {
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
     w5500_delay(200);
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
     w5500_delay(1000);
 }
 

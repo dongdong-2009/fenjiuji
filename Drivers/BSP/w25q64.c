@@ -17,8 +17,7 @@
 
 #include "w25q64.h" 
 
-
- #define	SPI_FLASH_CS_LOW   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET)  //选中FLASH	
+#define	SPI_FLASH_CS_LOW   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET)  //选中FLASH	
 #define	SPI_FLASH_CS_HIGH  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET)
 #define delay(x) vTaskDelay(x);
 
@@ -38,7 +37,7 @@ unsigned short SPI_FLASH_TYPE = W25Q64;//默认就是25Q64
 int spi2_init(void)
 {      
     Spi2Handle.Instance               = SPI2;
-    Spi2Handle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+    Spi2Handle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
     Spi2Handle.Init.Direction         = SPI_DIRECTION_2LINES;
     Spi2Handle.Init.CLKPhase          = SPI_PHASE_2EDGE;
     Spi2Handle.Init.CLKPolarity       = SPI_POLARITY_HIGH;
@@ -73,8 +72,6 @@ void SPI_Flash_Init(void)
     GPIO_InitTypeDef   GPIO_InitStructure;
     
     __HAL_RCC_GPIOB_CLK_ENABLE();
-    __HAL_RCC_GPIOD_CLK_ENABLE();
-    __HAL_RCC_GPIOG_CLK_ENABLE();
 
     /* W25q46 CS */
     GPIO_InitStructure.Pin   = GPIO_PIN_12;
@@ -82,17 +79,7 @@ void SPI_Flash_Init(void)
     GPIO_InitStructure.Pull  = GPIO_PULLUP;
     GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_MEDIUM;   
     HAL_GPIO_Init(GPIOB, &GPIO_InitStructure);
-    
-    /* SD_CS */
-	GPIO_InitStructure.Pin = GPIO_PIN_2; 
- 	HAL_GPIO_Init(GPIOD, &GPIO_InitStructure);
-    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET);
-
-    /* NRF_CS */
-    GPIO_InitStructure.Pin = GPIO_PIN_7; 
- 	HAL_GPIO_Init(GPIOG, &GPIO_InitStructure);
-    HAL_GPIO_WritePin(GPIOG, GPIO_PIN_7, GPIO_PIN_SET);
-    
+      
 	spi2_init();
       
 	SPI_FLASH_TYPE = SPI_Flash_ReadID();//读取FLASH ID.  

@@ -188,7 +188,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
     if (hspi->Instance == SPI1)
     {     
         __HAL_RCC_GPIOA_CLK_ENABLE();
-        __HAL_RCC_GPIOC_CLK_ENABLE();
+        //__HAL_RCC_GPIOC_CLK_ENABLE();
         __HAL_RCC_SPI1_CLK_ENABLE(); 
  
          /* PA4 --> CS */

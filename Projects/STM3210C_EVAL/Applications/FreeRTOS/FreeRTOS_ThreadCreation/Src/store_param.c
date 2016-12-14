@@ -48,13 +48,13 @@ struct stroe_param
 /* 参数存储映射表 */
 const struct stroe_param_map param_map[PARAM_MAX_NUM] = 
 {
-    {"server_ip",    0x100010,  16},
-    {"server_port",  0x100020,  16},
-    {"client_port",  0x100030,  16},
-    {"terminal_ip",  0x100040,  16},
-    {"mac",          0x100050,  16},
-    {"submask",      0x100060,  16},    
-    {"gateway",      0x100070,  16},
+    {"server_ip",    0x000000,  16},
+    {"server_port",  0x000010,  16},
+    {"client_port",  0x000020,  16},
+    {"terminal_ip",  0x000030,  16},
+    {"mac",          0x000040,  16},
+    {"submask",      0x000050,  16},    
+    {"gateway",      0x000060,  16},
 };
 
 
@@ -135,9 +135,8 @@ int store_param_read(char *name, char *data)
             if ((len > 0) && (len <= size))
             {
                 cs = crc16(param.data, param.len); 
-                if (cs == param.cs)               
-                {
-            
+                if ((cs == param.cs) && (cs != 0))               
+                {           
                     len = param.len;
                     memcpy(data, param.data,len); 
                     return len;

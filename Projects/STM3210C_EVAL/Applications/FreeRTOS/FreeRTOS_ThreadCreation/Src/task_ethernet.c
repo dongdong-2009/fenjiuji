@@ -275,12 +275,12 @@ int ethernet_tcp_client_test(struct ethernet *arg)
 *******************************************************************************/
 void task_ethernet(void *pvParameters)
 {
-    //ethernet_param_init(&net);
+    ethernet_param_init(&net);
   
     
     for( ;; )
 	{                    
-        //ethernet_tcp_client_test(&net);  
+        ethernet_tcp_client_test(&net);  
         vTaskDelay(1000);
 	}       
 }
