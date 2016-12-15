@@ -15,14 +15,14 @@
 
 
 /* 存储器大小 8M */
-#define STA_ADDR_STORE   0x000000
-#define END_ADDR_STORE   0x800000
+#define STA_ADDR_STORE   0x000000L
+#define END_ADDR_STORE   0x800000L
 
 
 
 /* 参数保存地址 0x400 = 1K, 这里分配10K */
-#define STA_ADDR_STORE_PARAM   0x100000
-#define END_ADDR_STORE_PARAM   0x103FFF
+#define STA_ADDR_STORE_PARAM   0x100000L
+#define END_ADDR_STORE_PARAM   0x103FFFL
 #define PARAM_MAX_NUM          100
 #define PARAM_MAX_SIZE         64
 
@@ -48,13 +48,13 @@ struct stroe_param
 /* 参数存储映射表 */
 const struct stroe_param_map param_map[PARAM_MAX_NUM] = 
 {
-    {"server_ip",    0x000000,  16},
-    {"server_port",  0x000010,  16},
-    {"client_port",  0x000020,  16},
-    {"terminal_ip",  0x000030,  16},
-    {"mac",          0x000040,  16},
-    {"submask",      0x000050,  16},    
-    {"gateway",      0x000060,  16},
+    {"server_ip",    0x100301L,  16},
+    {"server_port",  0x100211L,  16},
+    {"client_port",  0x100221L,  16},
+    {"terminal_ip",  0x100231L,  16},
+    {"mac",          0x100241L,  16},
+    {"submask",      0x100251L,  16},    
+    {"gateway",      0x100261L,  16},
 };
 
 

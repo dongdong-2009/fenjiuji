@@ -28,7 +28,7 @@
 *******************************************************************************/
 void SystemClock_Config(void)
 {
-    uint32_t SysClock, HCLK , PCLK1, PCLK2;
+    //uint32_t SysClock, HCLK , PCLK1, PCLK2;
   
     RCC_ClkInitTypeDef clkinitstruct = {0};
     RCC_OscInitTypeDef oscinitstruct = {0};
@@ -57,10 +57,10 @@ void SystemClock_Config(void)
         while(1); 
     }
     
-   SysClock = HAL_RCC_GetSysClockFreq();
-   HCLK = HAL_RCC_GetHCLKFreq();
-   PCLK1 = HAL_RCC_GetPCLK1Freq();
-   PCLK2 = HAL_RCC_GetPCLK2Freq();
+   //SysClock = HAL_RCC_GetSysClockFreq();72
+   //HCLK = HAL_RCC_GetHCLKFreq();72
+   //PCLK1 = HAL_RCC_GetPCLK1Freq();36
+   //PCLK2 = HAL_RCC_GetPCLK2Freq();72
 }
 
 
