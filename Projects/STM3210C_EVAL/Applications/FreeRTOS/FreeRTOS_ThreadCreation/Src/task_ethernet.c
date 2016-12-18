@@ -20,7 +20,7 @@
 
 
 
-const char server_ip[4] = {255, 168, 2, 0};
+const char server_ip[4] = {192, 168, 1, 101};
 const char server_port[2] = {0x1F, 0x51}; /* 8017*/
 const char client_port[2] = {0x1F,0x41}; /* 8001*/
 

@@ -48,13 +48,13 @@ struct stroe_param
 /* 参数存储映射表 */
 const struct stroe_param_map param_map[PARAM_MAX_NUM] = 
 {
-    {"server_ip",    0x100301L,  16},
-    {"server_port",  0x100211L,  16},
-    {"client_port",  0x100221L,  16},
-    {"terminal_ip",  0x100231L,  16},
-    {"mac",          0x100241L,  16},
-    {"submask",      0x100251L,  16},    
-    {"gateway",      0x100261L,  16},
+    {"server_ip",    0x000002L,  16},
+    {"server_port",  0x000012L,  16},
+    {"client_port",  0x000022L,  16},
+    {"terminal_ip",  0x000032L,  16},
+    {"mac",          0x000042L,  16},
+    {"submask",      0x000052L,  16},    
+    {"gateway",      0x000062L,  16},
 };
 
 
