@@ -364,7 +364,13 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
     rxlen = uart_rx_buff_size - pUartHandle->RxXferCount; 
     
     if (rxlen > 0)
-    {      
+    {              
+        if (((uart_rx_buff[rxlen - 1] != 0xFF) || (uart_rx_buff[rxlen - 2] != 0xFF)
+            || (uart_rx_buff[rxlen - 3] != 0xFF)) && (uart_no ==UART_4))
+        {
+            return 0;
+        }          
+      
         /* 取走部分数据 */
         if (rxlen > size)
         {
@@ -378,7 +384,8 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
             rxlen -= len;
             memcpy(uart_rx_buff, uart_rx_buff + len, rxlen);
             pUartHandle->RxXferCount = uart_rx_buff_size - rxlen;
-            
+            if (uart_no ==UART_4)
+               uart_init(UART_4, 9600);
            //HAL_NVIC_EnableIRQ(IRQn);
 
         }
@@ -391,6 +398,8 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
             memcpy(buff, uart_rx_buff, rxlen);
             rxlen = 0;
             pUartHandle->RxXferCount = uart_rx_buff_size;
+           if (uart_no ==UART_4)
+               uart_init(UART_4, 9600);
            // HAL_NVIC_EnableIRQ(IRQn);
         }
     }
