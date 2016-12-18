@@ -274,10 +274,9 @@ int ethernet_tcp_client_test(struct ethernet *arg)
     返 回 值：无
 *******************************************************************************/
 void task_ethernet(void *pvParameters)
-{
+{   
     ethernet_param_init(&net);
-  
-    
+   
     for( ;; )
 	{                    
         ethernet_tcp_client_test(&net);  

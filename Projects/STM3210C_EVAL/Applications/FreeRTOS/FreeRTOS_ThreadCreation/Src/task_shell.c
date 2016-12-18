@@ -103,7 +103,7 @@ int shell_byte_read(char *byte)
 {
     int len;
     
-    len = bsp_uart_receive(UART_1, byte, 1);
+    len = bsp_uart_receive(UART_2, byte, 1);
     if (len == 1)
     {
         return 1;

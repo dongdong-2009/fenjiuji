@@ -44,7 +44,7 @@ static struct lcd_str lcd;
 static void lcd_init(void)
 {
     /* 通信口初始化 */
-    uart_init(UART_2, LCD_BOUND); 
+    uart_init(UART_4, LCD_BOUND); 
 }
 
 
@@ -64,7 +64,7 @@ static int lcd_read(char *rxbuf, int size)
     while (time > 0)
     {   
         /* 从串口接收数据 */
-        len = bsp_uart_receive(UART_2, rxbuf + rxlen, size - rxlen); 
+        len = bsp_uart_receive(UART_4, rxbuf + rxlen, size - rxlen); 
         if (len > 0)
         {
             rxlen += len;
@@ -109,11 +109,11 @@ int lcd_send(char *buff)
     }
     
     /* 每一次发送命令就对串口进行初始化，防止串口发出错 */
-    uart_init(UART_2, LCD_BOUND);    
+    uart_init(UART_4, LCD_BOUND);    
     
     /* 将数据从串口发出去 */
     /* 发送数据到串口*/
-    ret = bsp_uart_send(UART_2, buff, len);
+    ret = bsp_uart_send(UART_4, buff, len);
     if (ret < 0)
     {
         return -1;

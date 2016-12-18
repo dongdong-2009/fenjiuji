@@ -43,9 +43,9 @@ void show_msg(void)
     main_print("\r\n\r\n");
     main_print("\r\n**********************************************************************");
     main_print("\r\n*                                                                    *");
-    main_print("\r\n*                          依福斯电子                                *");
+    main_print("\r\n*                          YiFuSi                                    *");
     main_print("\r\n*                                                                    *");
-    main_print("\r\n*               分酒机主控单元应用程序  (Version 1.0.0)              *");
+    main_print("\r\n*               FenJiuJi Main Ctrl Unit App (Version 1.0.0)          *");
     main_print("\r\n*                                                                    *");
     main_print("\r\n*                                         2016-11-20                 *");   
     main_print("\r\n*                                                                    *");
@@ -83,12 +83,12 @@ int main(void)
     main_print("create modbus task......OK\r\n");
     
     /* 创建lcd任务 */
-    xTaskCreate(task_lcd, "lcd", configMINIMAL_STACK_SIZE, NULL, 5, NULL);        
+    xTaskCreate(task_lcd, "lcd", configMINIMAL_STACK_SIZE, NULL, 4, NULL);        
     main_print("create LCD task......OK\r\n");
     
     /* 创建shell任务 */
-    xTaskCreate(task_shell, "shell", configMINIMAL_STACK_SIZE, NULL, 6, NULL);  
-    main_print("create shell task......OK\r\n");
+    //xTaskCreate(task_shell, "shell", configMINIMAL_STACK_SIZE, NULL, 6, NULL);  
+   // main_print("create shell task......OK\r\n");
     
     /* 任务调度 */
     vTaskStartScheduler();

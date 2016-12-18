@@ -51,7 +51,9 @@
 #include "cmsis_os.h"
 #include "esp8266.h"    
 #include "bsp.h"    
-    
+#include "bsp_uart.h"
+
+
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
@@ -149,6 +151,11 @@ void USART3_IRQHandler(void)
   HAL_UART_IRQHandler(&Uart3Handle);
 }
 
+
+void UART4_IRQHandler(void)
+{
+  HAL_UART_IRQHandler(&Uart4Handle);
+}
 
 
 void EXTI4_IRQHandler(void)

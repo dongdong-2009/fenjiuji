@@ -13,6 +13,8 @@
 #include <timers.h>
 
 #include "store_file.h"
+#include "bsp_uart.h"
+
 
 char aShowTime[50] = {0};
 char aShowDate[50] = {0};
@@ -27,8 +29,8 @@ char aShowDate[50] = {0};
 void task_modbus(void *pvParameters)
 {
    // RTC_CalendarConfig(0x16, 0x01, 0x01, 0x00, 0x00, 0x00);
-    file_sys_test();
-    
+
+    uart_init(UART_2, 115200);
     for( ;; )
 	{                   
         //RTC_CalendarShow(aShowTime, aShowDate);

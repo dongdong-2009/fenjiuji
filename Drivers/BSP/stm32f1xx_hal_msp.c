@@ -14,7 +14,7 @@
 extern __IO ITStatus Uart1Ready;
 extern __IO ITStatus Uart2Ready;
 extern __IO ITStatus Uart3Ready;
-
+extern __IO ITStatus Uart4Ready;
 
 /******************************************************************************
     功能说明：无
@@ -97,8 +97,34 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
     
         HAL_NVIC_SetPriority(USART3_IRQn, 0, 2);
         HAL_NVIC_EnableIRQ(USART3_IRQn);
-    }        
+    }
     
+    
+    if (huart->Instance == UART4)
+    {
+        __HAL_RCC_GPIOC_CLK_ENABLE();
+         
+        //__HAL_RCC_AFIO_CLK_ENABLE();
+        
+        /* Enable USART3 clock */
+        __HAL_RCC_UART4_CLK_ENABLE(); 
+  
+        GPIO_InitStruct.Pin       = GPIO_PIN_10;
+        GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
+        GPIO_InitStruct.Pull      = GPIO_PULLUP;
+        GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_HIGH;
+
+        HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+        /* UART RX GPIO pin configuration  */
+        GPIO_InitStruct.Pin = GPIO_PIN_11;
+        GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+
+        HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    
+        HAL_NVIC_SetPriority(UART4_IRQn, 0, 2);
+        HAL_NVIC_EnableIRQ(UART4_IRQn);
+    }    
     
 }
 
@@ -142,6 +168,17 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef *huart)
         HAL_GPIO_DeInit(GPIOB, GPIO_PIN_11);
   
         HAL_NVIC_DisableIRQ(USART3_IRQn);
+    } 
+    
+    if (huart->Instance == UART4)
+    {
+        __HAL_RCC_UART4_FORCE_RESET();
+        __HAL_RCC_UART4_RELEASE_RESET();
+
+        HAL_GPIO_DeInit(GPIOC, GPIO_PIN_10);
+        HAL_GPIO_DeInit(GPIOC, GPIO_PIN_11);
+  
+        HAL_NVIC_DisableIRQ(UART4_IRQn);
     }    
 }
 
@@ -168,7 +205,12 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle)
     if (UartHandle->Instance == USART3)
     {
         Uart3Ready = SET;
-    }    
+    } 
+    if (UartHandle->Instance == UART4)
+    {
+        Uart4Ready = SET;
+    }   
+    
 }
 
 

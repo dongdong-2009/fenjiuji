@@ -61,17 +61,17 @@ void r485_en_gpio_init(void)
 {   
     GPIO_InitTypeDef   GPIO_InitStructure;
 
-    /* PG9 --> R485_EN */
-    __HAL_RCC_GPIOG_CLK_ENABLE();  
+    /* PA1 --> R485_EN */
+    __HAL_RCC_GPIOA_CLK_ENABLE();  
     
     GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStructure.Pull  = GPIO_PULLUP;
     GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_MEDIUM;
-    GPIO_InitStructure.Pin = GPIO_PIN_9;
-    HAL_GPIO_Init(GPIOG, &GPIO_InitStructure);
+    GPIO_InitStructure.Pin = GPIO_PIN_1;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStructure);
     
     /* 低电平是接受状态 */
-    HAL_GPIO_WritePin(GPIOG, GPIO_PIN_9, GPIO_PIN_RESET); 
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET); 
 }
 
 
@@ -123,7 +123,7 @@ int uart_init(char uart_no, uint32_t bound)
         Uart2Handle.Init.StopBits   = UART_STOPBITS_1;
         Uart2Handle.Init.Parity     = UART_PARITY_NONE;
         Uart2Handle.Init.HwFlowCtl  = UART_HWCONTROL_NONE;
-        Uart2Handle.Init.Mode       = UART_MODE_TX;       
+        Uart2Handle.Init.Mode       = UART_MODE_TX_RX;       
         HAL_UART_DeInit(&Uart2Handle);
         HAL_UART_Init(&Uart2Handle);
         
@@ -137,12 +137,12 @@ int uart_init(char uart_no, uint32_t bound)
         memset(uart2_rx_buff, 0, UART2_RX_BUFF_SIZE); 
         
         /* 开启串口接收 */
-        // if (HAL_UART_Receive_IT(&Uart2Handle, 
-                                // (uint8_t *)uart2_rx_buff, 
-                                // UART2_RX_BUFF_SIZE) != HAL_OK)
-        // {
-            // return -1;
-        // }                
+         if (HAL_UART_Receive_IT(&Uart2Handle, 
+                                (uint8_t *)uart2_rx_buff, 
+                                 UART2_RX_BUFF_SIZE) != HAL_OK)
+         {
+            return -1;
+         }                
     } 
     
     /* 串口3初始化 */
@@ -239,7 +239,7 @@ int bsp_uart_send(char uart_no, char *buff, int len)
     if (uart_no == UART_2)
     {    
         /* 高电平是485发送状态 */
-        HAL_GPIO_WritePin(GPIOG, GPIO_PIN_9, GPIO_PIN_SET); 
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET); 
         
         /* 采用中断发送 */
         if (HAL_UART_Transmit_IT(&Uart2Handle,  (uint8_t *)buff, len) != HAL_OK)
@@ -257,7 +257,7 @@ int bsp_uart_send(char uart_no, char *buff, int len)
         Uart2Ready = RESET;         
         
         /* 低电平是485接受状态 */
-        HAL_GPIO_WritePin(GPIOG, GPIO_PIN_9, GPIO_PIN_RESET); 
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET); 
         
     }
     
@@ -368,7 +368,7 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
         /* 取走部分数据 */
         if (rxlen > size)
         {
-            HAL_NVIC_EnableIRQ(IRQn);
+            //HAL_NVIC_EnableIRQ(IRQn);
             
             /* 将数据取走 */
             len = size;       
@@ -379,19 +379,19 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
             memcpy(uart_rx_buff, uart_rx_buff + len, rxlen);
             pUartHandle->RxXferCount = uart_rx_buff_size - rxlen;
             
-            HAL_NVIC_EnableIRQ(IRQn);
+           //HAL_NVIC_EnableIRQ(IRQn);
 
         }
         
         /* 取全部数据 */
         else
         {
-            HAL_NVIC_EnableIRQ(IRQn);
+            //HAL_NVIC_EnableIRQ(IRQn);
             len = rxlen;       
             memcpy(buff, uart_rx_buff, rxlen);
             rxlen = 0;
             pUartHandle->RxXferCount = uart_rx_buff_size;
-            HAL_NVIC_EnableIRQ(IRQn);
+           // HAL_NVIC_EnableIRQ(IRQn);
         }
     }
   
