@@ -160,7 +160,7 @@ static int lcd_read(char *rxbuf, int size)
     while (time > 0)
     {
         /* 从串口接收数据 */
-        len = bsp_uart_receive(UART_4, rxbuf + rxlen, size - rxlen);
+        len = bsp_uart_receive(UART_2, rxbuf + rxlen, size - rxlen);
         if (len > 0)
         {
             rxlen += len;
@@ -171,9 +171,6 @@ static int lcd_read(char *rxbuf, int size)
 
         vTaskDelay(50);
     }
-
-
-
     return rxlen;
 }
 

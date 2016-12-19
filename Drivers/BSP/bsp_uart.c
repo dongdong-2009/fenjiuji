@@ -363,7 +363,7 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
     /* 当前收到的数据长度 */
     rxlen = uart_rx_buff_size - pUartHandle->RxXferCount; 
     
-    if (rxlen > 0)
+    if ((rxlen > 0) && (size > 0))
     {              
         if (((uart_rx_buff[rxlen - 1] != 0xFF) || (uart_rx_buff[rxlen - 2] != 0xFF)
             || (uart_rx_buff[rxlen - 3] != 0xFF)) && (uart_no ==UART_4))

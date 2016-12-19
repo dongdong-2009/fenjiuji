@@ -252,7 +252,7 @@ static int at_exe_cmd_ate(void)
 static int at_exe_cmd_gmr(void)
 {
     int ret;
-    char rxbuf[64] = {0};
+    char rxbuf[128] = {0};
     char len;
     
     /* 发送AT命令 */
@@ -263,7 +263,7 @@ static int at_exe_cmd_gmr(void)
     }
     
     /* 接收AT命令处理 */
-    len = esp8266_at_cmd_receive(rxbuf, 64, 300);
+    len = esp8266_at_cmd_receive(rxbuf, 128, 300);
     if (len > 0)
     {
         if (strstr(rxbuf, "AT version") != NULL)
@@ -297,7 +297,7 @@ static int at_exe_cmd_restore(void)
     }
     
     /* 接收AT命令处理 */
-    len = esp8266_at_cmd_receive(buff, 16, 500);
+    len = esp8266_at_cmd_receive(buff, 64, 500);
     if (len > 0)
     {
         if (strstr(buff, "OK\r\n") != NULL)
@@ -378,7 +378,7 @@ static int at_exe_cmd_cwdhcp(char mode, char en)
     }
     
     /* 接收AT命令处理 */
-    len = esp8266_at_cmd_receive(buff, 16, 500);
+    len = esp8266_at_cmd_receive(buff, 64, 500);
     if (len > 0)
     {
         if (strstr(buff, "OK\r\n") != NULL)
@@ -522,7 +522,7 @@ static int at_exe_cmd_cipmode(char mode)
     memset(buff, 0, 64);
     
     /* 接收AT命令处理 */
-    len = esp8266_at_cmd_receive(buff, 16, 500);
+    len = esp8266_at_cmd_receive(buff, 64, 500);
     if (len > 0)
     {
         if (strstr(buff, "OK\r\n") != NULL)
@@ -559,7 +559,7 @@ static int at_exe_cmd_cipmux(char mode)
     memset(buff, 0, 64);
     
     /* 接收AT命令处理 */
-    len = esp8266_at_cmd_receive(buff, 16, 500);
+    len = esp8266_at_cmd_receive(buff, 64, 500);
     if (len > 0)
     {
         if (strstr(buff, "OK\r\n") != NULL)
@@ -599,7 +599,7 @@ static int at_exe_cmd_cipserver(char mode, unsigned short port)
     memset(buff, 0, 64);
     
     /* 接收AT命令处理 */
-    len = esp8266_at_cmd_receive(buff, 16, 500);
+    len = esp8266_at_cmd_receive(buff, 64, 500);
     if (len > 0)
     {
         if (strstr(buff, "OK\r\n") != NULL)
@@ -637,7 +637,7 @@ static int at_exe_cmd_cipsto(unsigned short time)
     memset(buff, 0, 64);
     
     /* 接收AT命令处理 */
-    len = esp8266_at_cmd_receive(buff, 16, 500);
+    len = esp8266_at_cmd_receive(buff, 64, 500);
     if (len > 0)
     {
         if (strstr(buff, "OK\r\n") != NULL)
@@ -722,7 +722,7 @@ static int at_exe_cmd_cipsend(void)
     }
     
     /* 接收AT命令处理 */
-    len = esp8266_at_cmd_receive(buff, 16, 500);
+    len = esp8266_at_cmd_receive(buff, 64, 500);
     if (len > 0)
     {
         if (strstr(buff, ">") != NULL)
@@ -951,7 +951,7 @@ static int at_exe_cmd_cipap(char *ip, char *gateway, char *netmask)
     memset(buff, 0, 80);
     
     /* 接收AT命令处理 */
-    len = esp8266_at_cmd_receive(buff, 64, 500);
+    len = esp8266_at_cmd_receive(buff, 80, 500);
     if (len > 0)
     {
         if (strstr(buff, "OK") != NULL)

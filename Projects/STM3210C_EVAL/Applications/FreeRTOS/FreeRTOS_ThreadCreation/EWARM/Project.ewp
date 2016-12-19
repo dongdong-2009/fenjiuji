@@ -1978,10 +1978,7 @@
       <name>$PROJ_DIR$\..\Src\task_lcd.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\Src\task_master.c</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\Src\task_modbus.c</name>
+      <name>$PROJ_DIR$\..\Src\task_rtu.c</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\Src\task_shell.c</name>
@@ -2172,105 +2169,6 @@
     <file>
       <name>$PROJ_DIR$\..\..\..\..\..\..\Middlewares\Third_Party\FreeRTOS\Source\timers.c</name>
     </file>
-  </group>
-  <group>
-    <name>modbus</name>
-    <excluded>
-      <configuration>BOOT</configuration>
-    </excluded>
-    <group>
-      <name>Master</name>
-      <group>
-        <name>ModBus</name>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\modbus\mb_m.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\modbus\functions\mbfunccoils_m.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\modbus\functions\mbfuncdisc_m.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\modbus\functions\mbfuncholding_m.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\modbus\functions\mbfuncinput_m.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\modbus\rtu\mbrtu_m.c</name>
-        </file>
-      </group>
-      <group>
-        <name>Port</name>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\port\rtt\portevent_m.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\port\rtt\portserial_m.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\port\rtt\porttimer_m.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\port\user_mb_app_m.c</name>
-        </file>
-      </group>
-    </group>
-    <group>
-      <name>Slave</name>
-      <group>
-        <name>ModBus</name>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\modbus\mb.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\modbus\rtu\mbcrc.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\modbus\functions\mbfunccoils.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\modbus\functions\mbfuncdiag.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\modbus\functions\mbfuncdisc.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\modbus\functions\mbfuncholding.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\modbus\functions\mbfuncinput.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\modbus\functions\mbfuncother.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\modbus\rtu\mbrtu.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\modbus\functions\mbutils.c</name>
-        </file>
-      </group>
-      <group>
-        <name>Port</name>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\port\rtt\mod_bus_port.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\port\rtt\portevent.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\port\rtt\portserial.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\port\rtt\porttimer.c</name>
-        </file>
-        <file>
-          <name>$PROJ_DIR$\..\Src\FreeModbus\port\user_mb_app.c</name>
-        </file>
-      </group>
-    </group>
   </group>
   <group>
     <name>startup</name>

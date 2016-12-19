@@ -14,10 +14,11 @@
 #include "bsp.h"
 #include "task_ethernet.h"
 #include "task_wifi.h"
-#include "task_modbus.h"
+#include "task_rtu.h"
 #include "task_lcd.h"
 #include "task_shell.h"
 #include "bsp_uart.h"
+
 
 
 /* 调试开关 */
@@ -78,9 +79,9 @@ int main(void)
     xTaskCreate(task_wifi, "wifi", configMINIMAL_STACK_SIZE, NULL, 3, NULL);
     main_print("create wifi task......OK\r\n"); 
     
-    /* 创建modbus任务 */
-    xTaskCreate(task_modbus, "modbus", configMINIMAL_STACK_SIZE, NULL, 4, NULL);    
-    main_print("create modbus task......OK\r\n");
+    /* 创建rtu任务 */
+    xTaskCreate(task_rtu, "rtu", configMINIMAL_STACK_SIZE, NULL, 4, NULL);    
+    main_print("create rtu task......OK\r\n");
     
     /* 创建lcd任务 */
     xTaskCreate(task_lcd, "lcd", configMINIMAL_STACK_SIZE, NULL, 4, NULL);        
