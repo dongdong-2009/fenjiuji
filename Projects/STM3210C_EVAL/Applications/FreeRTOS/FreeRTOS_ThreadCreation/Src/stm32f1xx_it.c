@@ -46,7 +46,6 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
-#include "main.h"
 #include "stm32f1xx_it.h"
 #include "cmsis_os.h"
 #include "esp8266.h"    

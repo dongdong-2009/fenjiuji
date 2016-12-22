@@ -15,7 +15,7 @@
 #include "bsp_uart.h"
 #include "string.h"
 #include "stdio.h"
-#include "port.h"
+//#include "port.h"
 
 #define LCD_RX_BUFF_SIZE 128
 #define LCD_TX_BUFF_SIZE 64
@@ -27,6 +27,28 @@
 #define CMD_STR     0x70
 #define CMD_NUM     0x71
 #define CMD_ERR     0x1A
+
+
+typedef uint8_t BOOL;
+
+typedef unsigned char UCHAR;
+typedef char    CHAR;
+
+typedef uint16_t USHORT;
+typedef int16_t SHORT;
+
+typedef uint32_t ULONG;
+typedef int32_t LONG;
+
+#ifndef TRUE
+#define TRUE            1
+#endif
+
+#ifndef FALSE
+#define FALSE           0
+#endif
+
+
 
 enum page_enum
 {

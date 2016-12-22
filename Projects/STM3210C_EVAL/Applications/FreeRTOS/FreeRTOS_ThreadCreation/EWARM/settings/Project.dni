@@ -18,7 +18,7 @@ TraceBufferSize=0x00010000
 TraceStallIfFIFOFull=0x00000000
 TracePortSize=0x00000004
 [DebugChecksum]
-Checksum=1854822269
+Checksum=-1962483723
 [Exceptions]
 StopOnUncaught=_ 0
 StopOnThrow=_ 0
@@ -58,7 +58,7 @@ Fmt7=struct stroe_param-len	4	0
 Fmt0=char[128]	4	0
 Fmt1=char[2]	4	0
 Fmt2=char[4]	3	0
-Fmt3=char[512]	4	0
+Fmt3=char[512]	5	0
 Fmt4=char[64]	4	0
 Fmt5=u8[4096]	4	0
 Fmt6=uint8_t[3]	1	0
@@ -151,10 +151,10 @@ Bp3=_ 0 "EMUL_CODE" "{$PROJ_DIR$\..\Src\iap\menu.c}.150.3" 0 0 1 "" 0 "" 0
 Bp4=_ 0 "EMUL_CODE" "{$PROJ_DIR$\..\Src\iap\iap.c}.83.3" 0 0 1 "" 0 "" 0
 Bp5=_ 0 "EMUL_DATA" "esp8266_at_cmd_receive" 0 0 0 0 4294967295
 Bp6=_ 0 "EMUL_DATA" "esp8266_at_cmd_receive" 0 0 0 0 4294967295
-Bp7=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\Src\task_ethernet.c}.152.9" 0 0 1 "" 0 "" 0
-Bp8=_ 0 "EMUL_CODE" "{$PROJ_DIR$\..\Src\task_lcd.c}.70.13" 0 0 1 "" 0 "" 0
-Bp9=_ 0 "EMUL_DATA_LOG" "lcd" 0 0
-Bp10=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\..\..\..\..\Drivers\BSP\bsp_uart.c}.381.13" 0 0 1 "" 0 "" 0
+Bp7=_ 0 "EMUL_CODE" "{$PROJ_DIR$\..\Src\task_lcd.c}.92.13" 0 0 1 "" 0 "" 0
+Bp8=_ 0 "EMUL_DATA_LOG" "lcd" 0 0
+Bp9=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\..\..\..\..\Drivers\BSP\bsp_uart.c}.383.22" 0 0 1 "" 0 "" 0
+Bp10=_ 0 "EMUL_CODE" "{$PROJ_DIR$\..\Src\ymodem.c}.274.5" 0 0 1 "" 0 "" 0
 Count=11
 [Aliases]
 A0=_ "D:\fenjiuji_pro\code\fenjiuji\Projects\STM3210C_EVAL\Applications\FreeRTOS\FreeRTOS_ThreadCreation\Src\main.c" ""

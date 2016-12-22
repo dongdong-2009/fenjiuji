@@ -459,7 +459,7 @@ int wifi_send_byte(char *txbuf, int len)
 }
 
 //diff task who want to receive data from wifi task, shoud use this fun
-int wifi_reveive_byte(char *rxbuf, int size)
+int wifi_receive_byte(char *rxbuf, int size)
 {
     int len;
     
