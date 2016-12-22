@@ -378,15 +378,25 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
             
             /* 将数据取走 */
             len = size;       
-            memcpy(buff, uart_rx_buff, len);                    
+            //memcpy(buff, uart_rx_buff, len);
+            
+            for (int i = 0; i < len; i++)
+              buff[i] = uart_rx_buff[i];
             
             /* 将剩余的数据搬到最前面 */
             rxlen -= len;
-            memcpy(uart_rx_buff, uart_rx_buff + len, rxlen);
+            
+            //memcpy(uart_rx_buff, uart_rx_buff + len, rxlen);
+             for (int i = 0; i < rxlen; i++)
+              uart_rx_buff[i] = uart_rx_buff[len + i];
+            
             pUartHandle->RxXferCount = uart_rx_buff_size - rxlen;
-            if (uart_no ==UART_4)
+            if (uart_no == UART_4)
                uart_init(UART_4, 9600);
-           //HAL_NVIC_EnableIRQ(IRQn);
+            if (uart_no == UART_3)
+               uart_init(UART_3, 115200);
+            
+            //HAL_NVIC_EnableIRQ(IRQn);
 
         }
         
@@ -395,11 +405,17 @@ int bsp_uart_receive(char uart_no, char *buff, int size)
         {
             //HAL_NVIC_EnableIRQ(IRQn);
             len = rxlen;       
-            memcpy(buff, uart_rx_buff, rxlen);
+            //memcpy(buff, uart_rx_buff, rxlen);
+            for (int i = 0; i < rxlen; i++)
+              buff[i] = uart_rx_buff[i];
+            
             rxlen = 0;
             pUartHandle->RxXferCount = uart_rx_buff_size;
-           if (uart_no ==UART_4)
+            if (uart_no ==UART_4)
                uart_init(UART_4, 9600);
+            if (uart_no == UART_3)
+               uart_init(UART_3, 115200);          
+           
            // HAL_NVIC_EnableIRQ(IRQn);
         }
     }

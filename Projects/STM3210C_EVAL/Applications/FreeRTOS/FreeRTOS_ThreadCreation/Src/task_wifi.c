@@ -12,9 +12,11 @@
 #include <FreeRTOS.h>
 #include <task.h>
 #include <timers.h>
+#include <queue.h>
 
 #include "bsp_uart.h"
 #include "esp8266.h"
+#include "task_wifi.h"
 
 
 /* wifi功能调试开关 */
@@ -56,7 +58,7 @@ struct wifi_param
     char gateway[4]; /* 网关 */
     char netmask[4]; /* 子网掩码 */
     
-    char link_id;
+    int link_id;
     char link_stat;
 };
 
@@ -78,6 +80,50 @@ static struct wifi_param wifi =
     .server_ip = {192, 168, 1, 103},
     .server_port = 8017,
 };
+
+
+QueueHandle_t xQueue_wifi_tx, xQueue_wifi_rx;
+
+
+//the data which receiveing from wifi port, post to other task 
+static int wifi_receive_byte_post(char *rxbuf, int len)
+{
+ 	struct wifi_rx_message message;
+    BaseType_t ret;
+    
+    message.rxbuf = &rxbuf;
+    message.size = len;
+	ret = xQueueSend(xQueue_wifi_rx, ( void * ) &message, ( TickType_t ) 3000 ); 
+    if (ret != pdTRUE)
+    {
+        return -1;
+    } 
+    
+    return 0;
+}
+
+
+//pend data from other task, then send this data to wifi port
+static int wifi_send_byte_pend(char *rxbuf, int size)
+{
+ 	struct wifi_tx_message *pmessage;
+
+	if( xQueue_wifi_tx != 0 )
+	{
+		if( xQueueReceive( xQueue_wifi_tx, &( pmessage ), ( TickType_t ) 10 ) )
+		{
+            if (pmessage->len > size)
+            {
+                pmessage->len = size; 
+            } 
+            
+            memcpy(rxbuf, pmessage->txbuf, pmessage->len);
+            return pmessage->len;
+		}
+	}  
+    
+    return 0;
+}
 
 
 /******************************************************************************
@@ -250,6 +296,8 @@ static int wifi_ap_tcp_server(struct wifi_param *param)
     
     uart_init(UART_1, 115200);    
     
+    wifi.link_stat = 1;    
+            
     while (1)
     {
         /* 从服务器接收数据 */
@@ -258,18 +306,24 @@ static int wifi_ap_tcp_server(struct wifi_param *param)
         if (len > 0)
         {
             wifi.rxlen += len;
+            
+            ret = wifi_receive_byte_post(wifi.rxbuf,  wifi.rxlen);
+            if (ret < 0)
+            {
+                return -1;
+            }
+            
             wifi_print("[wifi]tcp read......[%d]\r\n", wifi.rxlen);
             for (i = 0; i < len; i++)
             {
                 wifi_print("%02X ", wifi.rxbuf[i]);   
             }
             
-            wifi_print("\r\n");
-            memset(wifi.rxbuf, 0, wifi.rxlen);
-            wifi.rxlen = 0;           
+            wifi_print("\r\n");         
         }
       
         /* 将接收到的数据发送到服务器 */
+        wifi.txlen = wifi_send_byte_pend(wifi.txbuf, WIFI_TX_BUFF_SIZE);
         if (wifi.txlen > 0)
         {
             /* 发送TCP数据 */
@@ -277,6 +331,7 @@ static int wifi_ap_tcp_server(struct wifi_param *param)
             wifi_print("[wifi]tcp write......[%d]\r\n", wifi.txlen);
             if (ret < 0)
             {
+                wifi.link_stat = 0;
                 return -1;
             }
             
@@ -328,9 +383,94 @@ void task_wifi(void *pvParameters)
         }
         
         vTaskDelay(5000);
-	}       
+	} 
 }
 
+
+static int wifi_message_send(char *txbuf, int len)
+{
+ 	struct wifi_tx_message message;
+    BaseType_t ret;
+    
+    message.txbuf = &txbuf;
+    message.len = len;
+	ret = xQueueSend(xQueue_wifi_tx, ( void * ) &message, ( TickType_t ) 3000 ); 
+    if (ret != pdTRUE)
+    {
+        return -1;
+    } 
+    
+    return 0;    
+}
+
+
+static int wifi_receive_message(char *rxbuf, int size)
+{
+ 	struct wifi_rx_message *pmessage;
+
+	if( xQueue_wifi_rx != 0 )
+	{
+		if( xQueueReceive( xQueue_wifi_rx, &( pmessage ), ( TickType_t ) 10 ) )
+		{
+            if (pmessage->size > size)
+            {
+                pmessage->size = size; 
+            } 
+            
+            memcpy(rxbuf, pmessage->rxbuf, pmessage->size);
+            return pmessage->size;
+		}
+	}      
+ 
+    return 0;    
+}
+
+
+//creat two queue, use to send data and receive data with diff task
+int wifi_queue_creat(void)
+{
+    xQueue_wifi_tx = xQueueCreate(1, sizeof( struct wifi_tx_message * ));
+	if(xQueue_wifi_tx == 0)
+	{
+		return -1;
+	}
+    
+    xQueue_wifi_rx = xQueueCreate(1, sizeof( struct wifi_rx_message * ));
+	if(xQueue_wifi_tx == 0)
+	{
+		return -1;
+	}
+    
+    return 0;
+}
+
+//diff task who want to send data to wifi task, shoud use this fun
+int wifi_send_byte(char *txbuf, int len)
+{
+    int ret;
+   
+    ret = wifi_message_send(txbuf, len);
+    if (ret < 0)
+    {
+        return -1;
+    }
+
+    return 0;    
+}
+
+//diff task who want to receive data from wifi task, shoud use this fun
+int wifi_reveive_byte(char *rxbuf, int size)
+{
+    int len;
+    
+    len = wifi_receive_message(rxbuf, size);
+    if (len < 0)
+    {
+        return -1;
+    }
+
+    return len;    
+}
 
 
 

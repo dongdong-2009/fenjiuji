@@ -12,13 +12,14 @@
 #include <task.h>
 
 #include "bsp.h"
+#include "bsp_uart.h"
+
 #include "task_ethernet.h"
 #include "task_wifi.h"
 #include "task_rtu.h"
 #include "task_lcd.h"
 #include "task_shell.h"
-#include "bsp_uart.h"
-
+#include "task_upgrade.h"
 
 
 /* 调试开关 */
@@ -58,6 +59,19 @@ void show_msg(void)
 
 
 /******************************************************************************
+    功能说明：任务之间通信方式创建
+    输入参数：无
+    输出参数：无
+    返 回 值：无
+*******************************************************************************/
+int task_event_create(void)
+{
+    wifi_queue_creat();
+    return 0;
+}
+
+
+/******************************************************************************
     功能说明：主函数
     输入参数：无
     输出参数：无
@@ -70,7 +84,10 @@ int main(void)
     
     /* 打印程序运行信息 */
     show_msg();
-       
+     
+    /* 任务之间通信方式创建 */
+    task_event_create();
+        
     /* 创建以太网模块管理任务 */
 	xTaskCreate(task_ethernet, "eth", configMINIMAL_STACK_SIZE, NULL, 2, NULL);
     main_print("create ethernet task......OK\r\n");
@@ -86,6 +103,10 @@ int main(void)
     /* 创建lcd任务 */
     xTaskCreate(task_lcd, "lcd", configMINIMAL_STACK_SIZE, NULL, 4, NULL);        
     main_print("create LCD task......OK\r\n");
+     
+    /* 创建升级任务 */
+    xTaskCreate(task_upgrade, "upgrade", configMINIMAL_STACK_SIZE, NULL, 4, NULL);        
+    main_print("create upgrade task......OK\r\n");    
     
     /* 创建shell任务 */
     //xTaskCreate(task_shell, "shell", configMINIMAL_STACK_SIZE, NULL, 6, NULL);  

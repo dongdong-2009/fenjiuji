@@ -811,7 +811,10 @@ static int at_exe_cmd_ipd(int *link_id, char *rxbuf, int size)
                 head = strstr(rxbuf, ":");
                 if (head != 0)
                 {
-                    memcpy(rxbuf, head + 1, len);
+                    //memcpy(rxbuf, head + 1, len);
+                    
+                   for (int i = 0; i < len; i++)
+                        rxbuf[i] = head[1 + i];
                     return len;
                 }
             }
