@@ -9,9 +9,17 @@
 #include "store.h"
 #include "lib.h"
 
-#define STORE_FILE_INDEX_ADDR	0x00000
+#define STORE_FILE_INDEX_ADDR	0x3FF00
 #define STORE_FILE_INDEX_SIZE	10
 #define STORE_FILE_NUM		4
+
+
+
+#ifdef CONFIG_STORE_FILE_DEBUG
+    #define Print(fmt,args...) debug(fmt, ##args)
+#else
+    #define Print(fmt,args...)
+#endif
 
 
 /* the files index use to read and write file */
@@ -48,10 +56,10 @@ struct store_file_map
 /* file store in exflash map */
 const struct store_file_map file_map[STORE_FILE_NUM] = 
 {
-	{0,	0,	0,	0},	/* file 1 */
-	{0,	0,	0,	0},	/* file 2 */
-	{0,	0,	0,	0},	/* .....  */
-	{0,	0,	0,	0},
+	{0x40000,	128,	0x40100,	512 * 1024},	/* file 1 */
+	{0x50000,	128,	0x50100,	512 * 1024},	/* file 2 */
+	{0x60000,	128,	0x60100,	512 * 1024},	/* .....  */
+	{0x70000,	128,	0x70100,	512 * 1024},
 };
 
 
@@ -162,15 +170,75 @@ int store_file_close(int file_id)
 }
 
 
-int store_file_open(char *file_name)
-{
+int store_file_open(char *file_id, char *file_name)
+{	
+	unsigned long file_info_addr;
+	unsigned long file_info_size;
+	int ret;
+	char i;
+
+	/* read file index struct */
+	ret = storage_read(STORE_FILE_INDEX_ADDR, (char *)&file_index,
+	                 STORE_FILE_INDEX_SIZE);
+	if (ret < 0) {
+		Print("store file storage_read error[%d]\r\n", ret);
+		return -1;
+	}
+
+	/* file index struct error, reset this data */
+	if (file_index.crc16 != usMBCRC16((unsigned char *)&file_index, 
+					  sizeof(file_index) - 2)) {
+		Print("store file file_index crc16 error\r\n");
+		return -1;
+	}
+
+	/* file index struct error, reset this data */
+	if ((file_index.id >= file_index.num) || (file_index.num > STORE_FILE_NUM)) {
+		Print("store file file_index id num error\r\n");
+		return -1;
+	}
+	
+	for (i = 0; i <file_index.num; i++) {
+		file_info_addr = file_map[i].file_info_addr;
+		file_info_size = file_map[i].file_info_size;
+		ret = storage_read(file_info_addr, (char *)&file_info, file_info_size);
+		if (ret < 0) {
+			Print("store file storage_read error[%d]\r\n", ret);
+			return -1;
+		}
+		
+		if (strcmp(file_name, file_info.name) == 0)
+		{
+			*file_id = i;
+			return 1;
+		}
+				
+	}
+	
 	return 0;
 }
 
 
 
-int store_file_read(char file_id, char *buff, int len)
+int store_file_read(char file_id, unsigned long offset, char *buff, int size)
 {
+	unsigned long file_data_addr;
+	unsigned long file_data_size;
+	int len;
+
+	file_data_addr = file_map[file_id].file_data_addr;
+	file_data_size = file_map[file_id].file_data_size;
+
+	if (offset +  size < file_data_size) {		
+		len = storage_read(file_data_addr + offset, buff, size);
+		if (len < 0) {	
+			Print("store file storage_read error[%d]\r\n", len);
+			return -1;
+		}
+		
+		return len;
+	}
+
 	return 0;
 }
 

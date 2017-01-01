@@ -19,7 +19,7 @@
 #include "task_rtu.h"
 #include "task_lcd.h"
 #include "task_shell.h"
-#include "task_upgrade.h"
+#include "upgrade.h"
 
 
 /* 调试开关 */
@@ -68,6 +68,24 @@ int task_event_create(void)
 {
     wifi_queue_creat();
     return 0;
+}
+
+
+/******************************************************************************
+    功能说明：无
+    输入参数：无
+    输出参数：无
+    返 回 值：无
+*******************************************************************************/
+void task_upgrade(void *pvParameters)
+{
+    char file_name[16] = {0};
+     
+    while(1)
+    {
+        //ymodem_receive_file(file_name, YMODEM_PORT_COM);
+        vTaskDelay(1000); 
+    }        
 }
 
 

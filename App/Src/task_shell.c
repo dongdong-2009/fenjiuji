@@ -1,18 +1,9 @@
-/******************************************************************************
-      版权所有：依福斯电子
-      版 本 号: 1.0
-      文 件 名: task_shell.c
-      生成日期: 2016.09.26
-      作    者：like
-      功能说明：shell任务模块
-      其他说明：1. 调试口默认是开启打印调试信息
-		2. 当连续接收到5个回车，打印信息功能关闭，开启shell命令行模式
-		3. 当进入shell命令行模式，连续按1次esc键，退出shell命令行模式，
-		   进入打印信息模式
-		4. 当前为命令行模式后，5分钟没有收到数据，将推出shell命令行模式，
-		   进入打印信息模式
-      修改记录：
-*******************************************************************************/
+/*
+ * shell
+ * likejshy@126.com
+ * 2016-12-16
+ */
+
 #include <FreeRTOS.h>
 #include <task.h>
 #include <timers.h>
@@ -24,23 +15,25 @@
 #include "shell_cmd.h"
 
 
-#define FINSH_HISTORY_LINES 5
+#define FINSH_HISTORY_LINES 	5
 #define FINSH_CMD_SIZE		80
-#define RT_FINSH_ARG_MAX    10
+#define RT_FINSH_ARG_MAX	10
 
-#define FINSH_PROMPT		"shell>>"
+#define FINSH_PROMPT		"LikeSell>>"
 
 
 typedef long (*syscall_func)();
 
 
-struct finsh_syscall {
-	const char*		name;
+struct finsh_syscall 
+{
+	const char *name;
 	syscall_func func;
 };
 
 
-struct finsh_sysvar {
+struct finsh_sysvar 
+{
 	const char *name;
 	char  type;
 	void  *var;
@@ -50,14 +43,16 @@ struct finsh_sysvar {
 typedef int (*cmd_function_t)(int argc, char **argv);
 
 
-enum input_stat {
+enum input_stat 
+{
 	WAIT_NORMAL,
 	WAIT_SPEC_KEY,
 	WAIT_FUNC_KEY,
 };
 
 
-struct finsh_shell {
+struct finsh_shell 
+{
 	enum input_stat stat;
 	char echo_mode:1;
 
@@ -72,14 +67,15 @@ struct finsh_shell {
 };
 
 
-struct finsh_syscall _syscall_table[] = {
+struct finsh_syscall _syscall_table[] = 
+{
 	{"hello", hello},
 	{"version", 0},
 };
 
 
 struct finsh_syscall *_syscall_table_begin = &_syscall_table[0];
-struct finsh_syscall *_syscall_table_end   = &_syscall_table[sizeof(_syscall_table) / sizeof(struct finsh_syscall)];
+struct finsh_syscall *_syscall_table_end = &_syscall_table[sizeof(_syscall_table) / sizeof(struct finsh_syscall)];
 
 struct finsh_sysvar *_sysvar_table_begin  = NULL;
 struct finsh_sysvar *_sysvar_table_end	  = NULL;
@@ -88,12 +84,6 @@ struct finsh_shell arg;
 
 
 
-/******************************************************************************
-    功能说明：无
-    输入参数：无
-    输出参数：无
-    返 回 值：无
-*******************************************************************************/
 int shell_byte_read(char *byte)
 {
 	int len;
@@ -107,12 +97,6 @@ int shell_byte_read(char *byte)
 }
 
 
-/******************************************************************************
-    功能说明：无
-    输入参数：无
-    输出参数：无
-    返 回 值：无
-*******************************************************************************/
 static char shell_handle_history(struct finsh_shell *shell)
 {
 #if defined(_WIN32)
@@ -131,15 +115,9 @@ static char shell_handle_history(struct finsh_shell *shell)
 }
 
 
-/******************************************************************************
-    功能说明：无
-    输入参数：无
-    输出参数：无
-    返 回 值：无
-*******************************************************************************/
 int msh_help(int argc, char **argv)
 {
-	kprintf("RT-Thread shell commands:\n");
+	kprintf("shell commands:\n");
 	{
 		struct finsh_syscall *index;
 
@@ -157,12 +135,6 @@ int msh_help(int argc, char **argv)
 }
 
 
-/******************************************************************************
-    功能说明：无
-    输入参数：无
-    输出参数：无
-    返 回 值：无
-*******************************************************************************/
 static int str_common(const char *str1, const char *str2)
 {
 	const char *str = str1;
@@ -176,12 +148,6 @@ static int str_common(const char *str1, const char *str2)
 }
 
 
-/******************************************************************************
-    功能说明：无
-    输入参数：无
-    输出参数：无
-    返 回 值：无
-*******************************************************************************/
 void msh_auto_complete(char *prefix)
 {
 	int length, min_length;
@@ -224,13 +190,6 @@ void msh_auto_complete(char *prefix)
 }
 
 
-
-/******************************************************************************
-    功能说明：无
-    输入参数：无
-    输出参数：无
-    返 回 值：无
-*******************************************************************************/
 static void shell_auto_complete(char *prefix)
 {
 	kprintf("\n");
@@ -241,12 +200,6 @@ static void shell_auto_complete(char *prefix)
 }
 
 
-/******************************************************************************
-    功能说明：无
-    输入参数：无
-    输出参数：无
-    返 回 值：无
-*******************************************************************************/
 static cmd_function_t msh_get_cmd(char *cmd, int size)
 {
 	struct finsh_syscall *index;
@@ -266,12 +219,6 @@ static cmd_function_t msh_get_cmd(char *cmd, int size)
 }
 
 
-/******************************************************************************
-    功能说明：无
-    输入参数：无
-    输出参数：无
-    返 回 值：无
-*******************************************************************************/
 static int msh_split(char *cmd, unsigned long length,
                      char *argv[RT_FINSH_ARG_MAX])
 {
@@ -327,13 +274,6 @@ static int msh_split(char *cmd, unsigned long length,
 }
 
 
-
-/******************************************************************************
-    功能说明：无
-    输入参数：无
-    输出参数：无
-    返 回 值：无
-*******************************************************************************/
 static int _msh_exec_cmd(char *cmd, unsigned long length, int *retp)
 {
 	int argc;
@@ -390,12 +330,6 @@ int msh_exec(char *cmd, unsigned long length)
 }
 
 
-/******************************************************************************
-    功能说明：无
-    输入参数：无
-    输出参数：无
-    返 回 值：无
-*******************************************************************************/
 static void shell_push_history(struct finsh_shell *shell)
 {
 	if (shell->line_position != 0) {
@@ -420,24 +354,12 @@ static void shell_push_history(struct finsh_shell *shell)
 }
 
 
-/******************************************************************************
-    功能说明：无
-    输入参数：无
-    输出参数：无
-    返 回 值：无
-*******************************************************************************/
 void shell_init(void)
 {
 	uart_init(UART_1, 115200);
 }
 
 
-/******************************************************************************
-    功能说明：无
-    输入参数：无
-    输出参数：无
-    返 回 值：无
-*******************************************************************************/
 void task_shell(void *pvParameters)
 {
 	char ch;

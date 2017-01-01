@@ -1,13 +1,9 @@
-/******************************************************************************
-      版权所有：依福斯电子
-      版 本 号: 1.0
-      文 件 名: bsp_rtc.h
-      生成日期: 2016.10.05
-      作    者：like
-      功能说明：时钟驱动
-      其他说明： 
-      修改记录：
-*******************************************************************************/
+/*
+ * RTC and Calendar
+ * likejshy@126.com
+ * 2016-12-28
+ */
+ 
 #ifndef _ESP_RTC_H
 #define _ESP_RTC_H
 
@@ -29,15 +25,10 @@ struct tm
 	int tm_yday;
 };
 
-extern int bsp_rtc_init(void);
 extern void RTC_CalendarShow(char *showtime, char *showdate);
-extern int RTC_CalendarConfig(char year, char month, char date,
-                              char hour, char minute, char second);
-
-void time_to_tm(time_t totalsecs, int offset, struct tm *result);
-unsigned long mktime(const unsigned int year0, const unsigned int mon0,
-                     const unsigned int day, const unsigned int hour,
-                     const unsigned int min, const unsigned int sec);
-
+extern int rtc_read(struct tm *calendar);
+extern int rtc_write(const unsigned int year, const unsigned int mon,
+              	const unsigned int day, const unsigned int hour,
+              	const unsigned int min, const unsigned int sec);
 
 #endif /*  _ESP_RTC_H */

@@ -1011,10 +1011,10 @@
       <name>$PROJ_DIR$\..\App\Src\task_shell.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\App\Src\task_upgrade.c</name>
+      <name>$PROJ_DIR$\..\App\Src\task_wifi.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\App\Src\task_wifi.c</name>
+      <name>$PROJ_DIR$\..\App\Src\upgrade.c</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\App\Src\ymodem.c</name>
@@ -1022,33 +1022,6 @@
   </group>
   <group>
     <name>drivers</name>
-    <group>
-      <name>BSP</name>
-      <file>
-        <name>$PROJ_DIR$\..\Drivers\BSP\Src\bsp.c</name>
-      </file>
-      <file>
-        <name>$PROJ_DIR$\..\Drivers\BSP\Src\bsp_sdcard.c</name>
-      </file>
-      <file>
-        <name>$PROJ_DIR$\..\Drivers\BSP\Src\bsp_uart.c</name>
-      </file>
-      <file>
-        <name>$PROJ_DIR$\..\Drivers\BSP\Src\esp8266.c</name>
-      </file>
-      <file>
-        <name>$PROJ_DIR$\..\Drivers\BSP\Src\stm32f1xx_hal_msp.c</name>
-      </file>
-      <file>
-        <name>$PROJ_DIR$\..\Drivers\BSP\Src\stm32f1xx_it.c</name>
-      </file>
-      <file>
-        <name>$PROJ_DIR$\..\Drivers\BSP\Src\w25q64.c</name>
-      </file>
-      <file>
-        <name>$PROJ_DIR$\..\Drivers\BSP\Src\W5500.c</name>
-      </file>
-    </group>
     <group>
       <name>CMSIS</name>
       <file>
@@ -1190,6 +1163,30 @@
         <name>$PROJ_DIR$\..\Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_ll_usb.c</name>
       </file>
     </group>
+    <file>
+      <name>$PROJ_DIR$\..\Drivers\BSP\Src\bsp.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\Drivers\BSP\Src\bsp_sdcard.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\Drivers\BSP\Src\bsp_uart.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\Drivers\BSP\Src\esp8266.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\Drivers\BSP\Src\stm32f1xx_hal_msp.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\Drivers\BSP\Src\stm32f1xx_it.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\Drivers\BSP\Src\w25q64.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\Drivers\BSP\Src\W5500.c</name>
+    </file>
   </group>
   <group>
     <name>freertos</name>
