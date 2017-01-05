@@ -7,19 +7,24 @@
 #include <task.h>
 #include <string.h>
 
+#include "bsp.h"
 #include "bsp_uart.h"
 #include "ymodem.h"
 #include "upgrade.h"
 #include "task_wifi.h"
+#include "store_param.h"
+
+#include "print.h"
 
 
-#define CONFIG_UPGRADE_DEBUG
+#define CONFIG_UPGRADE_PRINT
 
-#ifdef CONFIG_UPGRADE_DEBUG
+#ifdef CONFIG_UPGRADE_PRINT
     #define Print(fmt,args...) debug(fmt, ##args)
 #else
     #define Print(fmt,args...)
 #endif
+
 
 struct upgrade
 {
@@ -89,24 +94,83 @@ int upgrade_print(char *str)
 
 int upgrade_getchar(char *ch)
 {
-	return 0;
+	int len = 0;
+
+	if (arg.port == UPGRADE_PORT_COM) {
+		len = bsp_uart_receive(UART_1, ch, 1);
+		if (len < 0) {
+			Print("upgrade bsp_uart_receive error[%d]\r\n", len);
+			return -1;
+		}
+	}
+
+	if (arg.port == UPGRADE_PORT_WIFI) {
+		len = wifi_receive_byte(ch, 1);
+		if (len < 0) {
+			Print("upgrade wifi_receive_byte error[%d]\r\n", len);
+			return -1;
+		}
+	}
+	
+	return len;
 }
 
 
 
 int upgrade_mem1_download_file(char *file_name, unsigned long *file_size)
 {
+	int ret;
+	char temp[32] = {0}
+	;
+	ret = ymodem_receive_file(file_name, file_size, YMODEM_PORT_TCP);
+	if (ret < 0) {
+		Print("upgrade ymodem_receive_file error[%d]\r\n", ret);
+		return -1;
+	
+	}
+	
+	upgrade_print("download upgrade file ...... OK\r\n");
+	
+	upgrade_print("file name:");
+	upgrade_print(file_name);
+	upgrade_print("\r\n");
+		      
+	upgrade_print("file size:");
+	sprintf(temp, "%d", *file_size);
+	upgrade_print(temp);
+	upgrade_print("\r\n");		      
+	
 	return 0;	
 }
 
 
 int upgrade_mem2_firmware(char *file_name, unsigned long file_size)
 {
+	int ret;
+	
+	ret = store_param_save("upgrade file name", file_name, 16);
+	if (ret < 0) {
+		Print("upgrade store_param_save[%d]\r\n", ret);
+		return -1;
+	
+	}	
+	
+	ret = store_param_save("upgrade file size", file_name, 16);
+	if (ret < 0) {
+		Print("upgrade store_param_save[%d]\r\n", ret);
+		return -1;
+	
+	}	
+	
+	bsp_system_reboot();
+		
 	return 0;	
 }
 
+
 int upgrade_mem3_reboot(void)
 {
+	bsp_system_reboot();
 	return 0;	
 }
 
@@ -164,7 +228,7 @@ int upgrade_man_machine(struct upgrade *arg)
 
 
 
-int upgrade(char port)
+int upgrade(void)
 {
 	int ret;
 	char trigger_flag = 0;

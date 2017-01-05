@@ -10,7 +10,7 @@
 #define YMODEM_PORT_COM 0
 #define YMODEM_PORT_TCP 1
 
-extern int ymodem_receive_file(char *file_name, char port);
+extern int ymodem_receive_file(char *file_name, unsigned long *file_size, char port);
 
 
 #endif

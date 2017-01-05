@@ -11,7 +11,7 @@
 #define UPGRADE_PORT_WIFI 1
 
 
-extern int upgrade(char port);
+extern int upgrade(void);
 
 #endif /*  _TASK_UPGRADE_H */
 

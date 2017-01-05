@@ -39,7 +39,11 @@ extern int uart_clear(char uart_no);
 extern void kprintf(const char *fmt, ...);
 extern void debug_init(void);
 extern void debug(const char *fmt, ...);
-
+extern void kprintf_enable(void);
+extern void kprintf_disable(void);
+extern void debug_enable(void);
+extern void debug_disable(void);
 
 
 #endif /*  _BSP_UART_H */
+

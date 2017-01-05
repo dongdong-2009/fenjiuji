@@ -19,6 +19,52 @@
 #include "bsp_uart.h"
 #include "cmsis_os.h"
 
+
+static WWDG_HandleTypeDef  WwdgHandle;
+static char watch_dog_flag;
+
+int bsp_watchdog_config(void)
+{
+	WwdgHandle.Instance = WWDG;
+	
+	WwdgHandle.Init.Prescaler = WWDG_PRESCALER_8;
+	WwdgHandle.Init.Window    = 80;
+	WwdgHandle.Init.Counter   = 127;
+	
+	if (HAL_WWDG_Init(&WwdgHandle) != HAL_OK) {
+		return -1;	
+	}
+	
+	if (HAL_WWDG_Start(&WwdgHandle) != HAL_OK) {
+	  	return -1;
+	}
+	
+	watch_dog_flag = 1;
+	
+	return 0;
+}
+
+
+
+int bsp_watchdog(void)
+{
+	if (watch_dog_flag == 1) {
+		if (HAL_WWDG_Refresh(&WwdgHandle, 127) != HAL_OK)
+      			return -1;
+    	}
+	
+	return 0;
+}
+
+
+
+void bsp_system_reboot(void)
+{
+	watch_dog_flag = 0;
+	while(1);
+}
+
+
 /******************************************************************************
     功能说明：无
     输入参数：无
@@ -75,6 +121,8 @@ void bsp_init(void)
     
     SystemClock_Config();
      
+    //bsp_watchdog_config();
+    
     debug_init();
     
     SPI_Flash_Init();

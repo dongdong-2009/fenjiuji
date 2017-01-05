@@ -14,6 +14,8 @@
 
 extern void bsp_init(void);
 extern void SysTick_Handler(void);
+extern void bsp_system_reboot(void);
+extern int bsp_watchdog(void);
 
 #endif /*  _BSP_H */
 

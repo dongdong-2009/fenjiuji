@@ -294,7 +294,7 @@ static int ymodem_receive_file_data(int *package_no, char *rxbuf, char port)
 
 
 //use ymodem ptl receive a file from HyperTerminal
-int ymodem_receive_file(char *file_name, char port)
+int ymodem_receive_file(char *file_name, unsigned long *file_size, char port)
 {
 	unsigned long download_file_size = 0;
 	unsigned long receive_file_size = 0;
@@ -360,7 +360,9 @@ int ymodem_receive_file(char *file_name, char port)
 		return -1;
 	}
 	
-	return receive_file_size;
+	*file_size = receive_file_size;
+	
+	return 0;
 }
 
 

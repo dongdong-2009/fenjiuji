@@ -18,7 +18,7 @@ TraceBufferSize=0x00010000
 TraceStallIfFIFOFull=0x00000000
 TracePortSize=0x00000004
 [DebugChecksum]
-Checksum=-1962483723
+Checksum=-870150658
 [Exceptions]
 StopOnUncaught=_ 0
 StopOnThrow=_ 0
@@ -144,18 +144,7 @@ ProbeSetup0=2 1 1 2 0 0
 [Disassemble mode]
 mode=0
 [Breakpoints2]
-Bp0=_ 0 "EMUL_CODE" "{$PROJ_DIR$\..\..\..\..\Drivers\BSP\w25q46.c}.112.13" 0 0 1 "" 0 "" 0
-Bp1=_ 0 "EMUL_DATA" "RTC_CalendarShow" 0 0 0 0 4294967295
-Bp2=_ 0 "EMUL_DATA_LOG" "RTC_CalendarShow" 0 0
-Bp3=_ 0 "EMUL_CODE" "{$PROJ_DIR$\..\Src\iap\menu.c}.150.3" 0 0 1 "" 0 "" 0
-Bp4=_ 0 "EMUL_CODE" "{$PROJ_DIR$\..\Src\iap\iap.c}.83.3" 0 0 1 "" 0 "" 0
-Bp5=_ 0 "EMUL_DATA" "esp8266_at_cmd_receive" 0 0 0 0 4294967295
-Bp6=_ 0 "EMUL_DATA" "esp8266_at_cmd_receive" 0 0 0 0 4294967295
-Bp7=_ 0 "EMUL_CODE" "{$PROJ_DIR$\..\Src\task_lcd.c}.92.13" 0 0 1 "" 0 "" 0
-Bp8=_ 0 "EMUL_DATA_LOG" "lcd" 0 0
-Bp9=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\..\..\Drivers\BSP\bsp_uart.c}.383.22" 0 0 1 "" 0 "" 0
-Bp10=_ 0 "EMUL_CODE" "{$PROJ_DIR$\..\Src\ymodem.c}.240.2" 0 0 1 "" 0 "" 0
-Count=11
+Count=0
 [Aliases]
 A0=_ "D:\fenjiuji_pro\code\fenjiuji\Projects\STM3210C_EVAL\Applications\FreeRTOS\FreeRTOS_ThreadCreation\Src\main.c" ""
 A1=_ "D:\fenjiuji_pro\code\fenjiuji\Projects\STM3210C_EVAL\Applications\FreeRTOS\FreeRTOS_ThreadCreation\Src\task_lcd.c" ""

@@ -28,7 +28,7 @@
 char debug_en = 1;
 
 /* shell功能打印口使能标志 */
-char print_en = 0;
+char kprintf_en = 0;
 
 
 /* 串口操作句柄 */
@@ -445,6 +445,27 @@ int bsp_uart_send_str(char *buff)
 }
 
 
+void kprintf_enable(void)
+{
+	kprintf_en = 1;
+}
+
+void kprintf_disable(void)
+{
+	kprintf_en = 0;
+}
+
+void debug_enable(void)
+{
+	debug_en = 1;
+}
+
+void debug_disable(void)
+{
+	debug_en = 0;
+}
+
+
 /******************************************************************************
     功能说明：shell打印
     输入参数：fmt 打印数据
@@ -457,7 +478,9 @@ void kprintf(const char *fmt, ...)
     unsigned long length;
     static char rt_log_buf[RT_CONSOLEBUF_SIZE];
     
-    if (!print_en)
+    uart_init(UART_1, 115200); 
+    
+    if (!kprintf_en)
     {
         return;
     }
@@ -496,6 +519,8 @@ void debug(const char *fmt, ...)
     va_list args;
     unsigned long length;
     char buff[RT_CONSOLEBUF_SIZE] = {0};
+    
+    uart_init(UART_1, 115200); 
     
     if (!debug_en)
     {

@@ -1,4 +1,4 @@
-/*
+ /*
  * shell
  * likejshy@126.com
  * 2016-12-16
@@ -19,7 +19,7 @@
 #define FINSH_CMD_SIZE		80
 #define RT_FINSH_ARG_MAX	10
 
-#define FINSH_PROMPT		"LikeSell>>"
+#define FINSH_PROMPT		"Shell>>"
 
 
 typedef long (*syscall_func)();
@@ -64,6 +64,13 @@ struct finsh_shell
 	char line[FINSH_CMD_SIZE];
 	char line_position;
 	char line_curpos;
+	
+	char enter_num;
+	char esc_num;
+	char shell_status;
+	unsigned long shell_mode_ovt_time;
+	unsigned long no_rec_esc_time;
+	unsigned long no_rec_enter_time;
 };
 
 
@@ -88,11 +95,12 @@ int shell_byte_read(char *byte)
 {
 	int len;
 
-	len = bsp_uart_receive(UART_2, byte, 1);
-	if (len == 1) {
+	len = bsp_uart_receive(UART_1, byte, 1);
+	if (len > 0) {
 		return 1;
 	}
-
+	
+	vTaskDelay(100);	
 	return 0;
 }
 
@@ -360,17 +368,116 @@ void shell_init(void)
 }
 
 
+
+void shell_mode_enter(char ch)
+{
+	if (arg.shell_status == 0) {
+		
+		/* enter shell mode */
+		if (ch == '\r' || ch == '\n') {
+			arg.enter_num++;
+			if (arg.enter_num >= 5) {
+				debug("\r\n\r\nesc debug mode!\r\n");
+				debug("enter shell mode!\r\n");				
+				
+				arg.enter_num = 0;
+				
+				kprintf_enable();
+				debug_disable();
+				
+				arg.shell_status = 1;
+				
+			}
+		} else {
+			if (arg.enter_num > 0)
+				arg.enter_num = 0;			
+		}
+	} else {
+		
+		/* esc shell mode */
+		if (ch == 0x1B) {
+			arg.esc_num++;
+			if (arg.esc_num >= 5) {
+				
+				arg.esc_num = 0;
+				
+				kprintf_disable();
+				debug_enable();
+								
+				debug("\r\n\r\nesc shell mode!\r\n");
+				debug("enter debug mode!\r\n");
+				
+				arg.shell_status = 0;				
+			}
+		} else {
+			if (arg.esc_num > 0)
+				arg.esc_num = 0;			
+		}	
+	}
+	
+	if (arg.shell_mode_ovt_time > 0)
+		arg.shell_mode_ovt_time = 0;
+}
+
+
+
+void shell_mode_esc_ovt(void)
+{
+	/* if enter shell mode, not receive char for a ovt time, esc shell mode */
+	if (arg.shell_status == 1) {
+		arg.shell_mode_ovt_time++;
+		if (arg.shell_mode_ovt_time > 300) {
+			
+			arg.shell_mode_ovt_time = 0;
+			arg.esc_num = 0;
+			arg.enter_num = 0;
+			
+			kprintf_disable();
+			debug_enable();
+			
+			debug("\r\n\r\nesc shell mode!\r\n");
+			debug("enter debug mode!\r\n");
+			
+			arg.shell_status = 0;			
+		}
+	}
+	
+	/* if not receive char esc again, clear esc_num */
+	if (arg.esc_num > 0) {
+		arg.no_rec_esc_time++;
+		if (arg.no_rec_esc_time > 30) {
+			arg.no_rec_esc_time = 0;
+			arg.esc_num = 0;			
+		}
+	}
+	
+	/* if not receive char enter again, clear enter_numa */
+	if (arg.enter_num > 0) {
+		arg.no_rec_enter_time++;
+		if (arg.no_rec_enter_time > 30) {
+			arg.no_rec_enter_time = 0;
+			arg.enter_num = 0;			
+		}
+	}
+}
+
+
+
 void task_shell(void *pvParameters)
 {
 	char ch;
 	struct finsh_shell *shell = &arg;
 
 	shell_init();
+	
 	shell->echo_mode = 1;
 	kprintf(FINSH_PROMPT);
 
 	while (1) {
 		while (shell_byte_read(&ch) == 1) {
+			
+			shell_mode_enter(ch);
+			
 			if (ch == 0x1b) {
 				shell->stat = WAIT_SPEC_KEY;
 				continue;
@@ -482,7 +589,7 @@ void task_shell(void *pvParameters)
 				continue;
 			}
 
-			if (ch == '\r' || ch == '\n') {
+			if (ch == '\r' || ch == '\n') {								
 				shell_push_history(shell);
 
 				{
@@ -495,8 +602,7 @@ void task_shell(void *pvParameters)
 				memset(shell->line, 0, sizeof(shell->line));
 				shell->line_curpos = shell->line_position = 0;
 				break;
-			}
-
+			} 
 
 			if (shell->line_position >= FINSH_CMD_SIZE)
 				shell->line_position = 0;
@@ -528,6 +634,9 @@ void task_shell(void *pvParameters)
 				shell->line_curpos = 0;
 			}
 		}
+		
+		/* esc shell mode */
+		shell_mode_esc_ovt();
 	}
 }
 

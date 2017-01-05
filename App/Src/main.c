@@ -21,15 +21,16 @@
 #include "task_shell.h"
 #include "upgrade.h"
 
+#include "print.h"
 
-/* 调试开关 */
-#define CONFIG_MAIN_DEBUG
 
-/* 调试接口函数 */
-#ifdef CONFIG_MAIN_DEBUG
-    #define main_print(fmt,args...) debug(fmt, ##args)
+#define CONFIG_MAIN_PRINT
+
+
+#ifdef CONFIG_MAIN_PRINT
+    #define print(fmt,args...)  debug(fmt, ##args)
 #else
-    #define main_print(fmt,args...)
+    #define print(fmt,args...)
 #endif
 
 
@@ -41,19 +42,19 @@
 *******************************************************************************/
 void show_msg(void)
 {
-    main_print("\r\n\r\n");
-    main_print("\r\n\r\n");
-    main_print("\r\n**********************************************************************");
-    main_print("\r\n*                                                                    *");
-    main_print("\r\n*                          YiFuSi                                    *");
-    main_print("\r\n*                                                                    *");
-    main_print("\r\n*               FenJiuJi Main Ctrl Unit App (Version 1.0.0)          *");
-    main_print("\r\n*                                                                    *");
-    main_print("\r\n*                                         2016-11-20                 *");   
-    main_print("\r\n*                                                                    *");
-    main_print("\r\n**********************************************************************");
-    main_print("\r\n");
-    main_print("Programming Application runing!\r\n");
+    print("\r\n\r\n");
+    print("\r\n\r\n");
+    print("\r\n**********************************************************************");
+    print("\r\n*                                                                    *");
+    print("\r\n*                          YiFuSi                                    *");
+    print("\r\n*                                                                    *");
+    print("\r\n*               FenJiuJi Main Ctrl Unit App (Version 1.0.0)          *");
+    print("\r\n*                                                                    *");
+    print("\r\n*                                         2016-11-20                 *");   
+    print("\r\n*                                                                    *");
+    print("\r\n**********************************************************************");
+    print("\r\n");
+    print("Programming Application runing!\r\n");
 }
 
 
@@ -79,12 +80,12 @@ int task_event_create(void)
 *******************************************************************************/
 void task_upgrade(void *pvParameters)
 {
-    char file_name[16] = {0};
      
     while(1)
     {
         //ymodem_receive_file(file_name, YMODEM_PORT_COM);
-        vTaskDelay(1000); 
+	print("task_upgrade run!\r\n");
+        vTaskDelay(10000); 
     }        
 }
 
@@ -107,28 +108,26 @@ int main(void)
     task_event_create();
         
     /* 创建以太网模块管理任务 */
-	xTaskCreate(task_ethernet, "eth", configMINIMAL_STACK_SIZE, NULL, 2, NULL);
-    main_print("create ethernet task......OK\r\n");
+    xTaskCreate(task_ethernet, "eth", configMINIMAL_STACK_SIZE, NULL, 2, NULL);
     
     /* 创建wifi模块管理任务 */
     xTaskCreate(task_wifi, "wifi", configMINIMAL_STACK_SIZE, NULL, 3, NULL);
-    main_print("create wifi task......OK\r\n"); 
+ 
     
     /* 创建rtu任务 */
     xTaskCreate(task_rtu, "rtu", configMINIMAL_STACK_SIZE, NULL, 4, NULL);    
-    main_print("create rtu task......OK\r\n");
+
     
     /* 创建lcd任务 */
     xTaskCreate(task_lcd, "lcd", configMINIMAL_STACK_SIZE, NULL, 4, NULL);        
-    main_print("create LCD task......OK\r\n");
+
      
     /* 创建升级任务 */
     xTaskCreate(task_upgrade, "upgrade", configMINIMAL_STACK_SIZE, NULL, 4, NULL);        
-    main_print("create upgrade task......OK\r\n");    
+   
     
     /* 创建shell任务 */
-    //xTaskCreate(task_shell, "shell", configMINIMAL_STACK_SIZE, NULL, 6, NULL);  
-   // main_print("create shell task......OK\r\n");
+    xTaskCreate(task_shell, "shell", configMINIMAL_STACK_SIZE, NULL, 6, NULL);  
     
     /* 任务调度 */
     vTaskStartScheduler();
