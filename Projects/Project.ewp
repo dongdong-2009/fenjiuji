@@ -978,6 +978,9 @@
   <group>
     <name>app</name>
     <file>
+      <name>$PROJ_DIR$\..\App\Src\divid_cap.c</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\..\App\Src\lib.c</name>
     </file>
     <file>
@@ -1012,6 +1015,9 @@
     </file>
     <file>
       <name>$PROJ_DIR$\..\App\Src\task_wifi.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\App\Src\temp ctrl.c</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\App\Src\upgrade.c</name>

@@ -25,7 +25,7 @@ if not "%~1" == "" goto debugFile
 
 @echo on 
 
-"C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.5\common\bin\cspybat" -f "H:\fenjiuji_project\code\fenjiuji\Projects\settings\Project.APP.general.xcl" --backend -f "H:\fenjiuji_project\code\fenjiuji\Projects\settings\Project.APP.driver.xcl" 
+"C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.5\common\bin\cspybat" -f "E:\fenjiuji\Projects\settings\Project.APP.general.xcl" --backend -f "E:\fenjiuji\Projects\settings\Project.APP.driver.xcl" 
 
 @echo off 
 goto end 
@@ -34,7 +34,7 @@ goto end
 
 @echo on 
 
-"C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.5\common\bin\cspybat" -f "H:\fenjiuji_project\code\fenjiuji\Projects\settings\Project.APP.general.xcl" "--debug_file=%~1" --backend -f "H:\fenjiuji_project\code\fenjiuji\Projects\settings\Project.APP.driver.xcl" 
+"C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.5\common\bin\cspybat" -f "E:\fenjiuji\Projects\settings\Project.APP.general.xcl" "--debug_file=%~1" --backend -f "E:\fenjiuji\Projects\settings\Project.APP.driver.xcl" 
 
 @echo off 
 :end

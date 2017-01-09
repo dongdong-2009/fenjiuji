@@ -20,6 +20,8 @@
 #include "task_lcd.h"
 #include "task_shell.h"
 #include "upgrade.h"
+#include "divid_cup.h"
+#include "temp_ctrl.h"
 
 #include "print.h"
 
@@ -84,6 +86,8 @@ void task_upgrade(void *pvParameters)
     while(1)
     {
         //ymodem_receive_file(file_name, YMODEM_PORT_COM);
+	divid_cup_ctrl();
+	temperature_ctl();
 	print("task_upgrade run!\r\n");
         vTaskDelay(10000); 
     }        
