@@ -22,9 +22,9 @@
 #define CONFIG_UPGRADE_PRINT
 
 #ifdef CONFIG_UPGRADE_PRINT
-    #define Print(fmt,args...) debug(fmt, ##args)
+    #define print(fmt,args...) debug(fmt, ##args)
 #else
-    #define Print(fmt,args...)
+    #define print(fmt,args...)
 #endif
 
 
@@ -52,7 +52,7 @@ int upgrade_query_trigger(char port, char *flag)
 		
 		//ret = wifi_ioctl(WIFI_LINK_STATUS_GET, (unsigned long)&arg);
 		if (ret < 0) {
-			Print("upgrade upgrade_query_trigger error[%d]\r\n", ret);
+			print("upgrade upgrade_query_trigger error[%d]\r\n", ret);
 			return -1;
 		}
 		
@@ -77,7 +77,7 @@ int upgrade_print(char *str)
 	if (arg.port == UPGRADE_PORT_COM) {
 		ret = bsp_uart_send(UART_1, str, len);
 		if (ret < 0) {
-			Print("upgrade bsp_uart_send error[%d]\r\n", ret);
+			print("upgrade bsp_uart_send error[%d]\r\n", ret);
 			return -1;
 		}
 	}
@@ -85,7 +85,7 @@ int upgrade_print(char *str)
 	if (arg.port == UPGRADE_PORT_WIFI) {
 		ret = wifi_send_byte(str, 1);
 		if (ret < 0) {
-			Print("upgrade wifi_send_byte error[%d]\r\n", ret);
+			print("upgrade wifi_send_byte error[%d]\r\n", ret);
 		  	return -1;
 		}
 	}
@@ -101,7 +101,7 @@ int upgrade_getchar(char *ch)
 	if (arg.port == UPGRADE_PORT_COM) {
 		len = bsp_uart_receive(UART_1, ch, 1);
 		if (len < 0) {
-			Print("upgrade bsp_uart_receive error[%d]\r\n", len);
+			print("upgrade bsp_uart_receive error[%d]\r\n", len);
 			return -1;
 		}
 	}
@@ -109,7 +109,7 @@ int upgrade_getchar(char *ch)
 	if (arg.port == UPGRADE_PORT_WIFI) {
 		len = wifi_receive_byte(ch, 1);
 		if (len < 0) {
-			Print("upgrade wifi_receive_byte error[%d]\r\n", len);
+			print("upgrade wifi_receive_byte error[%d]\r\n", len);
 			return -1;
 		}
 	}
@@ -126,7 +126,7 @@ int upgrade_mem1_download_file(char *file_name, unsigned long *file_size)
 	;
 	ret = ymodem_receive_file(file_name, file_size, YMODEM_PORT_TCP);
 	if (ret < 0) {
-		Print("upgrade ymodem_receive_file error[%d]\r\n", ret);
+		print("upgrade ymodem_receive_file error[%d]\r\n", ret);
 		return -1;
 	
 	}
@@ -152,14 +152,14 @@ int upgrade_mem2_firmware(char *file_name, unsigned long file_size)
 	
 	ret = store_param_save("upgrade file name", file_name, 16);
 	if (ret < 0) {
-		Print("upgrade store_param_save[%d]\r\n", ret);
+		print("upgrade store_param_save[%d]\r\n", ret);
 		return -1;
 	
 	}	
 	
 	ret = store_param_save("upgrade file size", file_name, 16);
 	if (ret < 0) {
-		Print("upgrade store_param_save[%d]\r\n", ret);
+		print("upgrade store_param_save[%d]\r\n", ret);
 		return -1;
 	
 	}	
@@ -192,7 +192,7 @@ int upgrade_man_machine(struct upgrade *arg)
 	
 	ret = upgrade_getchar(&ch);
 	if (ret < 0) {
-		Print("upgrade upgrade_getchar error[%d]\r\n", ret);
+		print("upgrade upgrade_getchar error[%d]\r\n", ret);
 	  	return -1;
 	}
 		
@@ -201,21 +201,21 @@ int upgrade_man_machine(struct upgrade *arg)
 	case 0x31:
 		ret = upgrade_mem1_download_file(arg->file_name, &arg->file_size);
 		if (ret < 0) {
-			Print("upgrade upgrade_mem1_download_file error[%d]\r\n", ret);
+			print("upgrade upgrade_mem1_download_file error[%d]\r\n", ret);
 	  		return -1;
 		}
 		break;
 	case 0x32:
 		ret = upgrade_mem2_firmware(arg->file_name, arg->file_size);
 		if (ret < 0) {
-			Print("upgrade upgrade_mem2_firmware error[%d]\r\n", ret);
+			print("upgrade upgrade_mem2_firmware error[%d]\r\n", ret);
 	  		return -1;
 		}		
 		break;
 	case 0x33:
 		ret = upgrade_mem3_reboot();
 		if (ret < 0) {
-			Print("upgrade upgrade_mem3_firmware error[%d]\r\n", ret);
+			print("upgrade upgrade_mem3_firmware error[%d]\r\n", ret);
 	  		return -1;
 		}		
 		break;		
@@ -239,7 +239,7 @@ int upgrade(void)
 	while (!trigger_flag) {
 		ret = upgrade_query_trigger(arg.port, &trigger_flag);
 		if (ret < 0) {
-			Print("upgrade upgrade_query_trigger error[%d]\r\n", ret);
+			print("upgrade upgrade_query_trigger error[%d]\r\n", ret);
 			return -1;
 		}
 		
@@ -248,7 +248,7 @@ int upgrade(void)
 	
 	ret = upgrade_man_machine(&arg);
 	if (ret < 0) {
-		Print("upgrade upgrade_man_machine error[%d]\r\n", ret);
+		print("upgrade upgrade_man_machine error[%d]\r\n", ret);
 		return -1;
 	}
 	
@@ -263,4 +263,23 @@ int upgrade_trigger(char port)
 	return 0;
 }
 
+
+
+
+/******************************************************************************
+    功能说明：无
+    输入参数：无
+    输出参数：无
+    返 回 值：无
+*******************************************************************************/
+void task_upgrade(void *pvParameters)
+{
+     
+    while(1)
+    {
+        upgrade();
+	print("task_upgrade run!\r\n");
+        vTaskDelay(10000); 
+    }        
+}
 

@@ -31,6 +31,7 @@
 #include <task.h>
 #include <timers.h>
 #include "bsp_uart.h"
+#include "rtc.h"
 
 #define CONFIG_TEMP_CTL_DEBUG
 
@@ -57,23 +58,88 @@ struct port_cmd_lcd
 };
 
 
-static int temp_ctl_port(char cmd, unsigned long arg)
+struct port_cmd_rtu
 {
-	switch (cmd) {
-	case PORT_CMD_LCD:
+	char cmd;
+	union
+	{
+		int temp;
+	} sub;
+};
 
-		break;
+
+
+static int temp_ctl_port_lcd_show_temp(struct port_cmd_lcd *arg)
+{
+	extern int temperature1;
+	
+	temperature1 = arg->sub.temp;
+	
+	return 0;
+}
+
+
+
+static int temp_ctl_port_lcd(struct port_cmd_lcd *arg)
+{
+	int ret;
+	
+	switch (arg->cmd) {
+	case LCD_SOW_TEMP:
+		ret = temp_ctl_port_lcd_show_temp(arg);
+		break;	
 	default:
 		break;
 	}
         
-        return 0;
+        return ret;
+}
+
+
+
+static int temp_ctl_port_rtu(struct port_cmd_rtu *arg)
+{
+	int ret;
+	
+	switch (arg->cmd) {
+//	case LCD_SOW_TEMP:
+//		ret = temp_ctl_port_lcd(arg);
+//		break;	
+	default:
+		break;
+	}
+        
+        return ret;
+}
+
+
+static int temp_ctl_port(char cmd, unsigned long arg)
+{
+	int ret;
+	
+	switch (cmd) {
+	case PORT_CMD_LCD:
+		ret = temp_ctl_port_lcd((struct port_cmd_lcd*)arg);
+		break;
+	case PORT_CMD_RTU:
+		ret = temp_ctl_port_rtu((struct port_cmd_rtu*)arg);
+		break;		
+	default:
+		break;
+	}
+        
+        return ret;
 }
 
 
 
 static int temperature_real_time_read(int *temperature)
-{
+{	
+	struct tm calendar;
+	
+	rtc_read(&calendar);
+	
+	*temperature = calendar.tm_sec;
 	return 0;
 }
 
@@ -126,6 +192,14 @@ int temperature_monitor(int monitor_time_sec, int temp_min_val_arg,
 			return -1;
 		}
 
+		arg.cmd = LCD_SOW_TEMP;
+		arg.sub.temp = temperature;
+		ret = temp_ctl_port(PORT_CMD_LCD, (unsigned long)&arg);
+		if (ret < 0) {
+			print("temp_ctl_port error[%d]\r\n", ret);
+			return -1;
+		}		
+			
 		if (temperature < temp_min_val_arg) {
 			if (temp_max_time > 0)
 				temp_max_time = 0;
@@ -157,15 +231,6 @@ int temperature_monitor(int monitor_time_sec, int temp_min_val_arg,
 			}
 
 		}
-
-		arg.cmd = LCD_SOW_TEMP;
-		arg.sub.temp = temperature;
-		ret = temp_ctl_port(PORT_CMD_LCD, (unsigned long)&arg);
-		if (ret < 0) {
-			print("temp_ctl_port error[%d]\r\n", ret);
-			return -1;
-		}
-
 
 		vTaskDelay(1000);
 	}
@@ -251,7 +316,22 @@ int temperature_ctl(void)
 
 
 
-
+ /******************************************************************************
+    功能说明：无
+    输入参数：无
+    输出参数：无
+    返 回 值：无
+*******************************************************************************/
+void task_temp_ctrl(void *pvParameters)
+{
+     
+    while(1)
+    {
+	temperature_ctl();
+	print("task_temp_ctrl run!\r\n");
+        vTaskDelay(10000); 
+    }        
+}
 
 
 

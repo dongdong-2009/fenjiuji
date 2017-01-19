@@ -1128,6 +1128,9 @@
       <name>$PROJ_DIR$\..\Drivers\BSP\Src\bsp.c</name>
     </file>
     <file>
+      <name>$PROJ_DIR$\..\Drivers\BSP\Src\bsp_adc.c</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\..\Drivers\BSP\Src\bsp_sdcard.c</name>
     </file>
     <file>

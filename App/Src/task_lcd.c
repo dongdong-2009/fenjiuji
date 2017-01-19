@@ -15,7 +15,7 @@
 #include "bsp_uart.h"
 #include "string.h"
 #include "stdio.h"
-//#include "port.h"
+#include "rtc.h"
 
 #define LCD_RX_BUFF_SIZE 128
 #define LCD_TX_BUFF_SIZE 64
@@ -124,7 +124,7 @@ static struct Frame_str frame;
 const char *password1 ="111111";    //开机密码
 const char *password2 = "222222";   //操作密码
 const char *password3 = "333333";   //锁定与休眠密码
-const int temperature1 = 15;                                //温度
+int temperature1 = 15;                                //温度
 const char *str_product1 = "111111";
 const char *str_priceS1 = "25";
 const char *str_priceM1 = "75";
@@ -151,6 +151,22 @@ char change_bottle;                                     //更新的瓶位
 
 
 
+/******************************************************************************
+    功能说明：无
+    输入参数：无
+    输出参数：无
+    返 回 值：无
+*******************************************************************************/
+static void at_cmd(char *pCmd)
+{
+    strcpy(lcd.txbuf, pCmd);
+    lcd.txlen = strlen(lcd.txbuf);
+    lcd.txbuf[lcd.txlen++] = 0xFF;
+    lcd.txbuf[lcd.txlen++] = 0xFF;
+    lcd.txbuf[lcd.txlen++] = 0xFF;
+    lcd.txbuf[lcd.txlen++] = 0;
+    lcd_send(lcd.txbuf);
+}
 
 /******************************************************************************
     功能说明：无
@@ -159,10 +175,11 @@ char change_bottle;                                     //更新的瓶位
     返 回 值：无
 *******************************************************************************/
 static void lcd_init(void)
-{
+{     
     /* 通信口初始化 */
     uart_init(UART_4, LCD_BOUND);
-
+    
+    at_cmd("rest");
 }
 
 
@@ -182,7 +199,7 @@ static int lcd_read(char *rxbuf, int size)
     while (time > 0)
     {
         /* 从串口接收数据 */
-        len = bsp_uart_receive(UART_2, rxbuf + rxlen, size - rxlen);
+        len = bsp_uart_receive(UART_4, rxbuf + rxlen, size - rxlen);
         if (len > 0)
         {
             rxlen += len;
@@ -234,22 +251,6 @@ int lcd_send(char *buff)
     return 0;
 }
 
-/******************************************************************************
-    功能说明：无
-    输入参数：无
-    输出参数：无
-    返 回 值：无
-*******************************************************************************/
-static void at_cmd(char *pCmd)
-{
-    strcpy(lcd.txbuf, pCmd);
-    lcd.txlen = strlen(lcd.txbuf);
-    lcd.txbuf[lcd.txlen++] = 0xFF;
-    lcd.txbuf[lcd.txlen++] = 0xFF;
-    lcd.txbuf[lcd.txlen++] = 0xFF;
-    lcd.txbuf[lcd.txlen++] = 0;
-    lcd_send(lcd.txbuf);
-}
 
 /******************************************************************************
     功能说明：无
@@ -361,7 +362,45 @@ static void check_page(void)
 *******************************************************************************/
 static void deal_page_startup(void)
 {
-    ;
+    struct tm time;
+    char temp[5] = {0};
+    char buf[32] = {0};
+
+    if(lcd.page_last != lcd.page_present)
+    {
+	    rtc_read(&time);
+	    
+	    sprintf(temp, "%04d", time.tm_year);
+	    sprintf(buf, "rtc0=%s", temp);
+	    at_cmd(buf);
+	    vTaskDelay(1);
+	       
+	    sprintf(temp, "%02d", time.tm_mon);
+	    sprintf(buf, "rtc1=%s", temp);
+	    at_cmd(buf);
+	    vTaskDelay(1);
+	    
+	    sprintf(temp, "%02d", time.tm_mday);
+	    sprintf(buf, "rtc2=%s", temp);
+	    at_cmd(buf);
+	    vTaskDelay(1);
+	    
+	    sprintf(temp, "%02d", time.tm_hour);
+	    sprintf(buf, "rtc3=%s", temp);
+	    at_cmd(buf);
+	    vTaskDelay(1);
+	    
+	    sprintf(temp, "%02d", time.tm_min);
+	    sprintf(buf, "rtc4=%s", temp);
+	    at_cmd(buf);
+	    vTaskDelay(1);
+	    
+	    sprintf(temp, "%02d", time.tm_sec);
+	    sprintf(buf, "rtc5=%s", temp);
+	    at_cmd(buf);
+	    vTaskDelay(1);
+    }
+    
 }
 
 
@@ -373,9 +412,23 @@ static void deal_page_startup(void)
 *******************************************************************************/
 static void deal_page_code1(void)
 {
+    char password[7] = {0};
+    int len;
+    int ret;
+	
     if((frame.valid == TRUE)&&(frame.cmd == CMD_STR))
     {
-        if(strcmp(frame.databuf, password1) == 0)
+        
+	len = store_param_read("opt_psw", password);
+	if (len == 0) 
+	{
+		memcpy(password, password1, 6);
+		ret = store_param_save("opt_psw", password, 6);
+		if (ret < 0)
+			return;
+	}
+		    
+	if(strcmp(frame.databuf, password1) == 0)
         {
             at_cmd("code1return.val=1");
         }
@@ -1505,9 +1558,23 @@ static void deal_page_wash4(void)
 *******************************************************************************/
 static void deal_page_code6(void)
 {
+    char password[7] = {0};
+    int len;
+    int ret;    
+	
     if((frame.valid == TRUE)&&(frame.cmd == CMD_STR))
     {
-        if(strcmp(frame.databuf, password2) == 0)
+        
+	len = store_param_read("men_psw", password);
+	if (len == 0) 
+	{
+		memcpy(password, password2, 6);
+		ret = store_param_save("men_psw", password, 6);
+		if (ret < 0)
+			return;
+	}	    
+	    	    
+	if(strcmp(frame.databuf, password2) == 0)
         {
             at_cmd("code6return.val=1");
         }

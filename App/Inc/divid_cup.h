@@ -9,7 +9,6 @@
 #define _DIVID_CUP_H
 
 
-
-extern int divid_cup_ctrl(void);
+extern void task_divid_cup(void *pvParameters);
 
 #endif /*  _DIVID_CUP_H */

@@ -55,6 +55,12 @@ const struct stroe_param_map param_map[PARAM_MAX_NUM] =
     {"mac",          0x000040L,  16},
     {"submask",      0x000050L,  16},    
     {"gateway",      0x000060L,  16},
+    
+    {"opt_psw",      0x000070L,  16},
+    {"men_psw",      0x000080L,  16},
+    
+    {"press_max",    0x000090L,  16},
+    {"press_min",    0x0000A0L,  16},      
 };
 
 

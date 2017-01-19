@@ -11,7 +11,7 @@
 #define UPGRADE_PORT_WIFI 1
 
 
-extern int upgrade(void);
+extern void task_upgrade(void *pvParameters);
 
 #endif /*  _TASK_UPGRADE_H */
 

@@ -7,7 +7,6 @@
  #ifndef _TEMP_CTL_H
  #define _TEMP_CTL_H
  
- extern int temperature_ctl(void);
- 
+ extern void task_temp_ctrl(void *pvParameters);
  
  #endif
