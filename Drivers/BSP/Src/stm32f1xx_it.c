@@ -177,7 +177,7 @@ void ADC3_IRQHandler(void)
 * @param  None
 * @retval None
 */
-void DMA1_Channel1_IRQHandler(void)
+void DMA2_Channel4_5_IRQHandler(void)
 {
   HAL_DMA_IRQHandler(AdcHandle.DMA_Handle);
 }

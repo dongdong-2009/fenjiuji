@@ -210,6 +210,9 @@ int bsp_uart_send(char uart_no, char *buff, int len)
 {
 	/* 串口1发送 */
 	if (uart_no == UART_1) {
+		
+		uart_init(UART_1, 115200);
+		
 		/* 采用中断发送 */
 		if (HAL_UART_Transmit_IT(&Uart1Handle, (uint8_t *)buff, len) != HAL_OK) {
 			return -1;

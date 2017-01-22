@@ -20,8 +20,76 @@
 #include "cmsis_os.h"
 #include "bsp_adc.h"
 
+
 static WWDG_HandleTypeDef  WwdgHandle;
 static char watch_dog_flag;
+
+
+
+void bsp_gpio_OUT0A(char on_off)
+{
+	if (on_off == 1)
+		HAL_GPIO_WritePin(GPIOE, GPIO_PIN_5, GPIO_PIN_SET);
+	else 
+		HAL_GPIO_WritePin(GPIOE, GPIO_PIN_5, GPIO_PIN_RESET);	
+}
+
+
+void bsp_gpio_OUT0B(char on_off)
+{
+	if (on_off == 1)
+		HAL_GPIO_WritePin(GPIOE, GPIO_PIN_4, GPIO_PIN_SET);
+	else 
+		HAL_GPIO_WritePin(GPIOE, GPIO_PIN_4, GPIO_PIN_RESET);	
+}
+
+
+void bsp_gpio_OUT0C(char on_off)
+{
+	if (on_off == 1)
+		HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_SET);
+	else 
+		HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET);	
+}
+
+void bsp_gpio_OUT0D(char on_off)
+{
+	if (on_off == 1)
+		HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_SET);
+	else 
+		HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_RESET);	
+}
+
+void len_run(char on_off)
+{
+	if (on_off == 1)
+		HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0, GPIO_PIN_SET);
+	else 
+		HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0, GPIO_PIN_RESET);	
+}
+
+
+
+void bsp_dido_gpio_init(void)
+{
+	GPIO_InitTypeDef   GPIO_InitStructure;
+
+	__HAL_RCC_GPIOE_CLK_ENABLE();
+
+	GPIO_InitStructure.Mode	 = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStructure.Pull	 = GPIO_PULLUP;
+	GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_MEDIUM;
+	GPIO_InitStructure.Pin = GPIO_PIN_0 | GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4 |GPIO_PIN_5;
+	HAL_GPIO_Init(GPIOE, &GPIO_InitStructure);
+	
+	bsp_gpio_OUT0A(0);
+	bsp_gpio_OUT0B(0);
+	bsp_gpio_OUT0C(0);
+	bsp_gpio_OUT0D(0);
+	len_run(0);
+}
+
+
 
 int bsp_watchdog_config(void)
 {
@@ -125,7 +193,9 @@ void bsp_init(void)
 
         SPI_Flash_Init();
 
-        ADC_Config();
+        bsp_dido_gpio_init();
+	
+	ADC_Config();
 }
 
 
@@ -137,9 +207,21 @@ void bsp_init(void)
   */
 void SysTick_Handler(void)
 {
-        osSystickHandler();
+ 
+ 
+#ifdef	MAKE_APP
+	osSystickHandler();
+#endif
 
         HAL_IncTick();
 }
+
+
+
+
+
+
+
+
 
 

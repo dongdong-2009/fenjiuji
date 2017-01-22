@@ -22,6 +22,7 @@
 #include "divid_cup.h"
 #include "temp_ctrl.h"
 #include "print.h"
+#include "daemon.h"
 
 #define CONFIG_MAIN_PRINT
 
@@ -31,6 +32,9 @@
 #define print(fmt,args...)
 #endif
 
+
+
+#ifdef	MAKE_APP
 
 /******************************************************************************
     功能说明：打印程序信息
@@ -60,19 +64,6 @@ void show_msg(void)
 
 
 /******************************************************************************
-    功能说明：任务之间通信方式创建
-    输入参数：无
-    输出参数：无
-    返 回 值：无
-*******************************************************************************/
-int task_event_create(void)
-{
-	wifi_queue_creat();
-	return 0;
-}
-
-
-/******************************************************************************
     功能说明：主函数
     输入参数：无
     输出参数：无
@@ -85,9 +76,6 @@ int main(void)
 
 	/* 打印程序运行信息 */
 	show_msg();
-
-	/* 任务之间通信方式创建 */
-	task_event_create();
 
 	/* 创建以太网模块管理任务 */
 	xTaskCreate(task_ethernet, "eth", configMINIMAL_STACK_SIZE, NULL, 2, NULL);
@@ -105,7 +93,7 @@ int main(void)
 	xTaskCreate(task_upgrade, "upgrade", configMINIMAL_STACK_SIZE, NULL, 4, NULL);
 
 	/* 创建shell任务 */
-	xTaskCreate(task_shell, "shell", configMINIMAL_STACK_SIZE, NULL, 6, NULL);
+	//xTaskCreate(task_shell, "shell", configMINIMAL_STACK_SIZE, NULL, 6, NULL);
 
 	/* 创建divid_cup任务 */
 	xTaskCreate(task_divid_cup, "divid_cap", configMINIMAL_STACK_SIZE, NULL, 6, NULL);
@@ -113,7 +101,12 @@ int main(void)
 	/* 创建temp ctrl 任务 */
 	xTaskCreate(task_temp_ctrl, "temp_ctrl", configMINIMAL_STACK_SIZE, NULL, 6, NULL);
 
+	/* 创建daemon 任务 */
+	xTaskCreate(task_daemon, "task_daemon", configMINIMAL_STACK_SIZE, NULL, 7, NULL);
+	
 	/* 任务调度 */
 	vTaskStartScheduler();
 }
+
+#endif /* MAKE_APP */
 

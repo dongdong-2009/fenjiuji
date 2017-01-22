@@ -1,34 +1,32 @@
 /******************************************************************************
-      °æÈ¨ËùÓĞ£ºÒÀ¸£Ë¹µç×Ó
-      °æ ±¾ ºÅ: 1.0
-      ÎÄ ¼ş Ãû: task_wifi.h
-      Éú³ÉÈÕÆÚ: 2016.09.25
-      ×÷    Õß£ºlike
-      ¹¦ÄÜËµÃ÷£ºwifiÍ¨ĞÅÄ£¿é
-      ÆäËûËµÃ÷£º 
-      ĞŞ¸Ä¼ÇÂ¼£º
+      ç‰ˆæƒæ‰€æœ‰ï¼šä¾ç¦æ–¯ç”µå­
+      ç‰ˆ æœ¬ å·: 1.0
+      æ–‡ ä»¶ å: task_wifi.h
+      ç”Ÿæˆæ—¥æœŸ: 2016.09.25
+      ä½œ    è€…ï¼šlike
+      åŠŸèƒ½è¯´æ˜ï¼šwifié€šä¿¡æ¨¡å—
+      å…¶ä»–è¯´æ˜ï¼š 
+      ä¿®æ”¹è®°å½•ï¼š
 *******************************************************************************/
 #ifndef _TASK_WIFI_H
 #define _TASK_WIFI_H
 
+#include <queue.h>
 
-struct wifi_tx_message
-{
-    int len;
-    char **txbuf;
-};
-
-struct wifi_rx_message
+struct wifi_msg
 {
     int size;
-    char **rxbuf;
+    char *rxbuf;
 };
+
+extern QueueHandle_t xQueue_wifi_fd;
 
 
 extern void task_wifi(void *pvParameters);
 extern int wifi_send_byte(char *txbuf, int len);
 extern int wifi_receive_byte(char *rxbuf, int size);
 extern int wifi_queue_creat(void);
+extern void wifi_link_status_get(char *status);
 
 #endif /*  _TASK_WIFI_H */
 

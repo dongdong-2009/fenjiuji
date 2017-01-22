@@ -30,10 +30,13 @@
 #include <FreeRTOS.h>
 #include <task.h>
 #include <timers.h>
+#include "bsp.h"
 #include "bsp_uart.h"
-#include "rtc.h"
+#include "bsp_adc.h"
+#include "task_rtu.h"
 
-#define CONFIG_TEMP_CTL_DEBUG
+
+//#define CONFIG_TEMP_CTL_DEBUG
 
 #define PORT_CMD_RTU   0
 #define PORT_CMD_LCD   1
@@ -135,11 +138,11 @@ static int temp_ctl_port(char cmd, unsigned long arg)
 
 static int temperature_real_time_read(int *temperature)
 {	
-	struct tm calendar;
+	int ret;
 	
-	rtc_read(&calendar);
-	
-	*temperature = calendar.tm_sec;
+	ret = bsp_temperature_read(temperature);
+	if (ret < 0)
+		return -1;
 	return 0;
 }
 
@@ -148,28 +151,56 @@ static int temperature_arg_read(int *temp_min_val, int *temp_min_time,
 				int *temp_max_val, int *temp_max_time,
                                 int *temp_normal_time_arg)
 {
+	
+	*temp_min_val = 10;
+	*temp_min_time = 60;
+	
+	*temp_max_val = 30;
+	*temp_max_time = 60;
+	
+	*temp_normal_time_arg = 60;
+	
 	return 0;
 }
 
 
 int  temperature_compressor(char mode)
 {
+	if (mode == ON)
+		bsp_gpio_OUT0A(1);
+	else
+		bsp_gpio_OUT0A(0);
+	
 	return 0;
 }
 
 
 int temperature_compressor_fan(char mode)
 {
+	if (mode == ON)
+		bsp_gpio_OUT0B(1);
+	else
+		bsp_gpio_OUT0B(0);
 	return 0;
 }
 
-int temperature_heater(char mode)
+
+int temperature_heater(char place, char mode)
 {
+	if (mode == ON)
+		rtu_jiutou_ctl_set(0x0A, 0x0003, 0xFF00);
+	else
+		rtu_jiutou_ctl_set(0x0A, 0x0003, 0x0000);
+	
 	return 0;
 }
 
-int temperature_convect_fan(int mode)
+int temperature_convect_fan(char place, int mode)
 {
+	if (mode == ON)
+		rtu_jiutou_ctl_set(place, 0x0002, 0xFF00);
+	else
+		rtu_jiutou_ctl_set(place, 0x0002, 0x0000);	
 	return 0;
 }
 
@@ -185,7 +216,7 @@ int temperature_monitor(int monitor_time_sec, int temp_min_val_arg,
 	struct port_cmd_lcd arg;
         int ret;
 
-	while (monitor_time_sec--) {
+	while (1) {
 		ret = temperature_real_time_read(&temperature);
 		if (ret < 0) {
 			print("temperature_real_time_read, error[%d]\r\n", ret);
@@ -229,9 +260,14 @@ int temperature_monitor(int monitor_time_sec, int temp_min_val_arg,
 			if (temp_normal_time > temp_normal_time_arg) {
 				return 1;
 			}
-
 		}
 
+		if (monitor_time_sec > 0) {
+			monitor_time_sec--;
+			if (monitor_time_sec == 0)
+				break;
+		}
+		
 		vTaskDelay(1000);
 	}
 
@@ -257,7 +293,7 @@ int temperature_ctl(void)
 		return -1;
 	}
 
-	ret = temperature_monitor(60, temp_min_val_arg, temp_min_time_arg,
+	ret = temperature_monitor(0, temp_min_val_arg, temp_min_time_arg,
 				 temp_max_val_arg, temp_max_time_arg,
 				 temp_normal_time_arg);
 	if (ret < 0) {
@@ -270,18 +306,23 @@ int temperature_ctl(void)
 
 		temperature_compressor(OFF);
 		temperature_compressor_fan(OFF);
-		temperature_heater(ON);
-		temperature_convect_fan(ON);
-
-		ret = temperature_monitor(60, temp_min_val_arg, 
-					  temp_min_time_arg,
-				 	   temp_max_val_arg, temp_max_time_arg,
-				 	    temp_normal_time_arg);
+		temperature_heater(1, ON);
+		temperature_convect_fan(1, ON);
+		temperature_heater(2, ON);
+		temperature_convect_fan(2, ON);
+		
+		ret = temperature_monitor(600, temp_min_val_arg, 
+					      temp_min_time_arg,
+				 	      temp_max_val_arg,
+					      temp_max_time_arg,
+				 	      temp_normal_time_arg);
 
 		temperature_compressor(OFF);
 		temperature_compressor_fan(OFF);
-		temperature_heater(OFF);
-		temperature_convect_fan(OFF);
+		temperature_heater(1, OFF);
+		temperature_convect_fan(1, OFF);
+		temperature_heater(2, OFF);
+		temperature_convect_fan(2, OFF);
 
 		if (ret != 1) {
 			print("temperature monitor, error[%d]\r\n", ret);
@@ -294,10 +335,13 @@ int temperature_ctl(void)
 
 		temperature_compressor(ON);
 		temperature_compressor_fan(ON);
-		temperature_heater(OFF);
-		temperature_convect_fan(ON);
-
-		ret = temperature_monitor(60, temp_min_val_arg,
+		
+		temperature_heater(1, OFF);
+		temperature_convect_fan(1, ON);
+		temperature_heater(2, OFF);
+		temperature_convect_fan(2, ON);
+		
+		ret = temperature_monitor(600, temp_min_val_arg,
 					  temp_min_time_arg,
 				 	temp_max_val_arg, temp_max_time_arg,
 				 	temp_normal_time_arg);

@@ -18,7 +18,7 @@
 
 
 /* 调试开关 */
-#define CONFIG_ESP8266_DEBUG
+//#define CONFIG_ESP8266_DEBUG
 
 /* 调试接口函数 */
 #ifdef CONFIG_ESP8266_DEBUG

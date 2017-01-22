@@ -514,11 +514,11 @@ static int rtu_tiaoya_ctl(char rtu_addr)
 	char len;
 	int ret;
 
-	for (i = 0; i < rtu.ty_ctl_cmd_idx[rtu_addr - 1]; i++) {
+	for (i = 0; i < rtu.ty_ctl_cmd_idx[0]; i++) {
 		len = modbus_ctl_0x05_frame_pack(buff,
 						 rtu_addr,
-						 rtu.ty_ctl_cmd[rtu_addr - 0x0A][i],
-						 rtu.reg_ty_ctl[rtu_addr - 0x0A][i]);
+						 rtu.ty_ctl_cmd[0][i],
+						 rtu.reg_ty_ctl[0][i]);
 		if (len > 0) {
 			ret = modbus_frame_send(buff, len);
 			if (ret < 0) {
@@ -535,8 +535,8 @@ static int rtu_tiaoya_ctl(char rtu_addr)
 				return -1;
 			}
 
-			ret = modbus_ctl_0x05_frame_unpack(rtu.ty_ctl_cmd[rtu_addr - 0x0A][i],
-							   rtu.reg_ty_ctl[rtu_addr - 0x0A][i],
+			ret = modbus_ctl_0x05_frame_unpack(rtu.ty_ctl_cmd[0][i],
+							   rtu.reg_ty_ctl[0][i],
 							   rtu_addr,
 							   buff,
 							   len);
@@ -546,12 +546,56 @@ static int rtu_tiaoya_ctl(char rtu_addr)
 		}
 	}
 
-	rtu.ty_ctl_cmd_idx[rtu_addr - 1] = 0;
-	memset(rtu.jt_ctl_cmd[rtu_addr - 1], 0, RTU_TIAOYA_REG_CTL_NUM);
+	rtu.ty_ctl_cmd_idx[0] = 0;
+	memset(rtu.ty_ctl_cmd[0], 0, RTU_TIAOYA_REG_CTL_NUM);
 	return 0;
 }
 
 
+
+static int rtu_tiaoya_arg(char rtu_addr)
+{
+	int i;
+	char buff[64] = {0};
+	char len;
+	int ret;
+
+	for (i = 0; i < rtu.ty_arg_cmd_idx[0]; i++) {
+		len = modbus_ctl_0x05_frame_pack(buff,
+						 rtu_addr,
+						 rtu.ty_arg_cmd[0][i],
+						 rtu.reg_ty_arg[0][i]);
+		if (len > 0) {
+			ret = modbus_frame_send(buff, len);
+			if (ret < 0) {
+				return -1;
+			}
+		}
+
+		memset(buff, 0, 64);
+
+		len = modbus_frame_receive(buff,  64, 150);
+		if (len > 0) {
+			ret = modbus_frame_unpack(rtu_addr, buff, len);
+			if (ret < 0) {
+				return -1;
+			}
+
+			ret = modbus_ctl_0x05_frame_unpack(rtu.ty_arg_cmd[0][i],
+							   rtu.reg_ty_arg[0][i],
+							   rtu_addr,
+							   buff,
+							   len);
+			if (ret < 0) {
+				return -1;
+			}
+		}
+	}
+
+	rtu.ty_arg_cmd_idx[0] = 0;
+	memset(rtu.ty_arg_cmd[0], 0, RTU_TIAOYA_REG_ARG_NUM);
+	return 0;
+}
 
 /******************************************************************************
     功能说明：无
@@ -580,7 +624,7 @@ void task_rtu(void *pvParameters)
 	while (1) {
 		rtu_tiaoya_dat(0x0A);
 		rtu_tiaoya_ctl(0x0A);
-		//rtu_tiaoya_arg(0x0A);
+		rtu_tiaoya_arg(0x0A);
 
 		rtu_jiutou_dat(0x01);
 		rtu_jiutou_ctl(0x01);
@@ -666,16 +710,45 @@ int rtu_tiaoya_ctl_set(char rtu_addr, unsigned short ty_ctl_cmd,
 {
 	char index;
 
-	index = rtu.ty_ctl_cmd_idx[rtu_addr - 1];
+	index = rtu.ty_ctl_cmd_idx[0];
 
 	if (index < RTU_TIAOYA_REG_CTL_NUM) {
-		rtu.reg_ty_ctl[rtu_addr - 0x0A][index] = reg_ty_ctl;
-		rtu.ty_ctl_cmd[rtu_addr - 0x0A][index++] = ty_ctl_cmd;
-		rtu.ty_ctl_cmd_idx[rtu_addr - 1] = index;
+		rtu.reg_ty_ctl[0][index] = reg_ty_ctl;
+		rtu.ty_ctl_cmd[0][index++] = ty_ctl_cmd;
+		rtu.ty_ctl_cmd_idx[0] = index;
 		return 0;
 	}
 
 	return -1;
 }
 
+
+int rtu_tiaoya_dat_get(char rtu_addr, unsigned short ty_dat_index,
+		       unsigned short *reg_ty_dat)
+{
+	if (ty_dat_index < RTU_TIAOYA_REG_DAT_NUM) {
+		*reg_ty_dat = rtu.reg_ty_dat[0][ty_dat_index];
+		return 0;
+	}
+
+	return -1;
+}
+
+
+int rtu_tiaoya_arg_set(char rtu_addr, unsigned short ty_arg_cmd,
+		       unsigned short reg_ty_arg)
+{
+	char index;
+
+	index = rtu.ty_arg_cmd_idx[0];
+
+	if (index < RTU_TIAOYA_REG_ARG_NUM) {
+		rtu.reg_ty_arg[0][index] = reg_ty_arg;
+		rtu.ty_arg_cmd[0][index++] = ty_arg_cmd;
+		rtu.ty_arg_cmd_idx[0] = index;
+		return 0;
+	}
+
+	return -1;
+}
 

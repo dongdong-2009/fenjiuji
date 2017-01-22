@@ -15,13 +15,15 @@
 #include "bsp_uart.h"
 #include "store_file.h"
 #include "lib.h"
+#include "upgrade.h"
+#include "task_wifi.h"
 
 
-#define YMODEM_ACK 0x46
+#define YMODEM_ACK 0x06
 #define YMODEM_EOT 0x04 //end of transmission
+#define YMODEM_C   0x43
 
-
-#define CONFIG_YMODEM_DEBUG
+//#define CONFIG_YMODEM_DEBUG
 
 
 #ifdef CONFIG_YMODEM_DEBUG
@@ -45,7 +47,7 @@ static int ymodem_putchar(char ch, char port)
 	}
 
 	if (port == YMODEM_PORT_TCP) {
-		ret = wifi_send_byte(&ch, 1);
+		ret = upgrade_msg_post(&ch, 1);
 		if (ret < 0) {
 			Print("ymodem wifi_send_byte error[%d]\r\n", ret);
 		  	return -1;
@@ -71,7 +73,7 @@ static int ymodem_receive_byte(char *rxbuf, int size, char port)
 	}
 
 	if (port == YMODEM_PORT_TCP) {
-		len = wifi_receive_byte(rxbuf, size);
+		len = upgrade_msg_pend(rxbuf, size);
 		if (len < 0) {
 			Print("ymodem wifi_receive_byte error[%d]\r\n", len);
 			return -1;
@@ -83,12 +85,19 @@ static int ymodem_receive_byte(char *rxbuf, int size, char port)
 
 
 // unpack the fisrt ymodem frame
+//01 00 FF 50 72 6F 6A 65 63 74 2E 62 69 6E 00 34 34 36 36 
+//38 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+//00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+//00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+//00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+//00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+//00 00 00 00 00 00 00 00 00 00 00 00 97 2D 
 static int ymodem_file_info_unpack(char *file_name, unsigned long *file_size,
                                    char *rxbuf, int len)
 {
 	char file_size_str[8] = {0};
 	unsigned short crc = 0;
-
+		
 	// first package_no file data len = 128
 	if (rxbuf[0] == 0x01) {
 		// pack num 0
@@ -116,18 +125,25 @@ static int ymodem_file_info_unpack(char *file_name, unsigned long *file_size,
 static int ymodem_file_data_unpack(int *package_no, char *rxbuf, int len)
 {
 	unsigned short crc = 0;
-
+	unsigned short data_size = 0;
+	
 	// file data len 1024
-	if (rxbuf[0] == 0x02) {
+	if (rxbuf[0] == 0x02) 
+		data_size = 1024;	
+	
+	if (rxbuf[0] == 0x01)  
+		data_size = 128;
+	
+	if (data_size > 0)
+	{
 		// package_no must same pro set
-		if ((rxbuf[1] == *package_no) && (rxbuf[2] == ~rxbuf[2])) {
+		if (rxbuf[1] == *package_no) {
 			// crc16 from data
-			crc = Cal_CRC16((const unsigned char*)rxbuf + 3, 1024);
+			crc = Cal_CRC16((const unsigned char*)rxbuf + 3, data_size);
 			if (crc == (rxbuf[len - 2] * 0x100 + rxbuf[len - 1])) {
-				memcpy(rxbuf, rxbuf + 3, 1024);
-				*package_no++; // set the next package_no
-
-				return 1024;
+				memcpy(rxbuf, rxbuf + 3, data_size);
+				*package_no = *package_no + 1; // set the next package_no
+				return data_size;
 			}
 		}
 	}
@@ -140,7 +156,7 @@ static int ymodem_file_data_unpack(int *package_no, char *rxbuf, int len)
 
 static int ymodem_receive_frame(char *rxbuf, int size, char port, char over_time)
 {
-	int tick = over_time * 1000 / 50;
+	int tick = over_time * 1000 / 200;
 	int rxlen = 0, len;
 	// if rxlen > 0, over 3 tick not receive data, frame receive finish
 	int byte_tick = 3;
@@ -157,7 +173,7 @@ static int ymodem_receive_frame(char *rxbuf, int size, char port, char over_time
 		if (len > 0) {
 			rxlen += len;
 			byte_tick = 3; //reset this byte_tick
-			tick = over_time * 1000 / 50; // reset tick
+			tick = over_time * 1000 / 200; // reset tick
 		}
 
 		if ((len == 0) && (rxlen > 0)) {
@@ -165,7 +181,7 @@ static int ymodem_receive_frame(char *rxbuf, int size, char port, char over_time
 				return rxlen;
 		}
 
-		vTaskDelay(50);
+		vTaskDelay(200);
 	}
 
 	return 0;
@@ -206,8 +222,6 @@ static int ymodem_receive_tcp_frame(char port)
 				return 1;
 			}
 		}
-
-		vTaskDelay(2000);
 	}
 
 	return 0;
@@ -221,33 +235,41 @@ static int ymodem_receive_file_info(char *file_name, unsigned long *file_size,
 	int len;
 	int ret;
 
-	ymodem_putchar('C', port);
-
-	len = ymodem_receive_frame(rxbuf, 200, port, 3);
-	if (len < 0) {
-		Print("ymodem_receive_frame error[%d]\r\n", len);
-		return -1;
-	}	
+	memset(rxbuf, 0, 1200);
 	
-	if (len > 0) {
-		ret = ymodem_file_info_unpack(file_name, file_size, rxbuf, len);
-		if (ret < 0) {
-			Print("ymodem_file_info_unpack error[%d]\r\n", ret);
+	while (1) {
+		ymodem_putchar('C', port);
+	
+		len = ymodem_receive_frame(rxbuf, 1200, port, 3);
+		if (len < 0) {
+			Print("ymodem_receive_frame error[%d]\r\n", len);
 			return -1;
 		}	
-			
-		if (ret == 0) {
-			ret = ymodem_putchar(YMODEM_ACK, port);
+		
+		if (len > 0) {
+			ret = ymodem_file_info_unpack(file_name, file_size, rxbuf, len);
 			if (ret < 0) {
-				Print("ymodem_putchar error[%d]\r\n", ret);
+				Print("ymodem_file_info_unpack error[%d]\r\n", ret);
 				return -1;
+			}	
+				
+			if (ret == 0) {
+				ret = ymodem_putchar(YMODEM_ACK, port);
+				if (ret < 0) {
+					Print("ymodem_putchar error[%d]\r\n", ret);
+					return -1;
+				}
+				
+				vTaskDelay(500);
+				ymodem_putchar('C', port);
+				break;
 			}
-			
-			return 0;
 		}
+		
+		vTaskDelay(1000);
 	}
-
-	return -2; //receive file info ovt
+	
+	return 0; //receive file info ovt
 }
 
 
@@ -258,7 +280,7 @@ static int ymodem_receive_file_data(int *package_no, char *rxbuf, char port)
 	int len;
 	int ret;
 
-	len = ymodem_receive_frame(rxbuf, 1200, port, 30);
+	len = ymodem_receive_frame(rxbuf, 1200, port, 5);
 	if (len < 0) {
 		Print("ymodem_receive_frame error[%d]\r\n", len);
 		return -1;
@@ -279,11 +301,6 @@ static int ymodem_receive_file_data(int *package_no, char *rxbuf, char port)
 		//unpack the ymodem ptl, get the file data and len
 		len = ymodem_file_data_unpack(package_no, rxbuf, len);		
 		if (len > 0) {
-			ret = ymodem_putchar(YMODEM_ACK, port);
-			if (len < 0) {	
-				Print("ymodem_putchar error[%d]\r\n", len);
-				return -1;
-			}
 			
 			return len;
 		}
@@ -294,15 +311,15 @@ static int ymodem_receive_file_data(int *package_no, char *rxbuf, char port)
 
 
 //use ymodem ptl receive a file from HyperTerminal
+char rxbuf[1200] = {0};
 int ymodem_receive_file(char *file_name, unsigned long *file_size, char port)
 {
 	unsigned long download_file_size = 0;
 	unsigned long receive_file_size = 0;
-	char rxbuf[1200] = {0};
 	int package_no = 1;
 	int len;
-	int ret;
-	int file_id;
+	int ret = 0;
+	int file_id = 0;
 
 	if (port == YMODEM_PORT_TCP) {
 		//if use tcp port, HyperTerminal will send this frame,
@@ -336,23 +353,33 @@ int ymodem_receive_file(char *file_name, unsigned long *file_size, char port)
 			Print("ymodem_receive_file_data error[%d]\r\n", len);
 			return -1;
 		}
-
+		
 		// save the file data to exflash store
-		ret = store_file_write(file_id, rxbuf, len);
-		if (ret < 0) {
-			Print("ymodem store_file_write error[%d]\r\n", ret);
-			return -1;
-		}
-
-		receive_file_size += len;
+		if (len > 0) {
+			ret = store_file_write(file_id, rxbuf, len);
+			if (ret < 0) {
+				Print("ymodem store_file_write error[%d]\r\n", ret);
+				return -1;
+			}
+			
+			ret = ymodem_putchar(YMODEM_ACK, port);
+			if (len < 0) {	
+				Print("ymodem_putchar error[%d]\r\n", len);
+				return -1;
+			}
+					
+			receive_file_size += len;
+			memset(rxbuf, 0, 1200);
+		}				
 	}
 
 	//end of transmission
-	ret = ymodem_putchar(YMODEM_EOT, port);
-	if (ret < 0) {
-		Print("ymodem_putchar error[%d]\r\n", ret);
-		return -1;
-	}
+	vTaskDelay(1000);
+	ymodem_putchar(YMODEM_ACK, port);
+	vTaskDelay(1000);
+	ymodem_putchar('C', port);
+	vTaskDelay(1000);
+	ymodem_putchar(YMODEM_ACK, port);
 
 	ret = store_file_close(file_id);
 	if (ret < 0) {

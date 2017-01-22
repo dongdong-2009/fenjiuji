@@ -8,8 +8,10 @@
 
 
 extern int store_file_creat(char *file_name);
-extern int store_file_write(char file_id, char *buff, int len);
+extern int store_file_write(int file_id, char *buff, int len);
 extern int store_file_close(int file_id);
-extern int store_file_read(char file_id, char *buff, int len);
+extern int store_file_open(int *file_id, char *file_name, unsigned long *file_size);
+extern int store_file_read(int file_id, unsigned long offset, char *buff, int size);
+extern int store_file_clear(int file_id);
 
 #endif

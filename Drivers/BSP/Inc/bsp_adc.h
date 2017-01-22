@@ -10,6 +10,7 @@
  #define _BSP_ADC_H
  
  extern int ADC_Config(void);
+ extern int bsp_temperature_read(int *temperature);
  
  #endif
  
