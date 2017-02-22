@@ -16,7 +16,7 @@
 struct wifi_msg
 {
     int size;
-    char *rxbuf;
+    char rxbuf[1024];
 };
 
 extern QueueHandle_t xQueue_wifi_fd;

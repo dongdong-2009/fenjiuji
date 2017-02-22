@@ -11,7 +11,10 @@
 #ifndef _TASK_LCD_H
 #define _TASK_LCD_H
 
-extern void task_lcd(void *pvParameters);
+extern int g_wash_num;
+extern int g_bottling_num;
 
+extern void task_lcd(void *pvParameters);
+extern int lcd_author_judge(void);
 
 #endif /*  _TASK_LCD_H */

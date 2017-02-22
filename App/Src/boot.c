@@ -42,12 +42,12 @@ void show_boot_msg(void)
 	print("\r\n\r\n");
 	print("\r\n**********************************************************************");
 	print("\r\n*                                                                    *");
-	print("\r\n*			      YiFuSi				        *");
-	print("\r\n*								        *");
-	print("\r\n*		   FenJiuJi Main Ctrl Unit Boot (Version 1.0.0)         *");
-	print("\r\n*								        *");
-	print("\r\n*					     2016-11-20		        *");
-	print("\r\n*								        *");
+	print("\r\n*                          YiFuSi                                    *");
+	print("\r\n*                                                                    *");
+	print("\r\n*               FenJiuJi Main Ctrl Unit BOOT (Version 1.0.0)         *");
+	print("\r\n*                                                                    *");
+	print("\r\n*                                         2016-11-20                 *");
+	print("\r\n*                                                                    *");
 	print("\r\n**********************************************************************");
 	print("\r\n");
 }
@@ -117,7 +117,7 @@ int main(void)
 			if (ret < 0)
 				print("upgrade_system error[%d]!\r\n", ret);
 			
-			
+			print("upgrade_system OK[%d]!\r\n", ret);
 		}
 		
 		HAL_Delay(1000);
@@ -133,7 +133,6 @@ int main(void)
 		print("goto APP!\r\n");
 		
 		ulPortSetInterruptMask();
-
 		
     		if (((*(__IO uint32_t*)APPLICATION_ADDRESS) & 0x2FFE0000 ) == 0x20000000) {
       			JumpAddress = *(__IO uint32_t*) (APPLICATION_ADDRESS + 4);

@@ -508,3 +508,42 @@ void debug(const char *fmt, ...)
 	va_end(args);
 }
 
+
+
+unsigned int uart3_interval_ms;
+
+int uart3_receive_packet(char *rxbuf, int size, unsigned short interval_ms)
+{	
+	char packet_receive_flag = 0;
+	int len = 0;
+	int rxlen = 0;
+		
+	rxlen = UART3_RX_BUFF_SIZE - Uart3Handle.RxXferCount;
+	
+	/* two data packet time is interval_ms */
+	if (rxlen > 0) {
+	     	if (uart3_interval_ms++ > interval_ms) {		
+			uart3_interval_ms = 0;
+			packet_receive_flag = 1;
+		}
+	}
+	
+	/* cat data from uart2 rx buff */
+	if (packet_receive_flag == 1) {						
+		if (rxlen > size)
+			rxlen = size;																
+		
+		len = rxlen;
+		memcpy(rxbuf, uart3_rx_buff, len);		
+		uart_init(UART_3, 115200);
+	}
+	
+	return len;
+}
+
+
+
+
+
+
+

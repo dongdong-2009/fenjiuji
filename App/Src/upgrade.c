@@ -40,7 +40,7 @@ struct upgrade {
 QueueHandle_t xQueue_upgrade_fd;
 
 static struct upgrade arg;
-
+static struct upgrade_msg message;
 
 
 
@@ -55,42 +55,76 @@ static int upgrade_queue_creat(void)
 }
 
 
-
-
-int upgrade_msg_post(char *txbuf, int len)
+int __upgrade_msg_post(char *txbuf, int len)
 {
-	struct upgrade_msg message;
 	BaseType_t ret;
+	struct upgrade_msg *pmessage;
 
-	message.buff = txbuf;
+	
+	memcpy(message.buff, txbuf, len);
 	message.len = len;
-	ret = xQueueSend(xQueue_upgrade_fd, ( void * ) &message, ( TickType_t ) 3000 );
+	pmessage = &message;
+	ret = xQueueSend(xQueue_upgrade_fd, ( void * ) &pmessage, ( TickType_t ) 30000 );
 	if (ret != pdTRUE) {
 		return -1;
 	}
 
-	return 0;
+	return  -1;
 }
 
 
 
-int upgrade_msg_pend(char *rxbuf, int size)
+int __upgrade_msg_pend(char *rxbuf, int size)
 {
 	struct wifi_msg *pmessage;
+	int len = 0;
 
 	if( xQueue_wifi_fd != 0 ) {
-		if( xQueueReceive( xQueue_wifi_fd, &( pmessage ), ( TickType_t ) 10 ) ) {
+		if( xQueueReceive( xQueue_wifi_fd, &( pmessage ), ( TickType_t ) 200 ) ) {
 			if (pmessage-> size) {
 				pmessage->size = size;
 			}
 
 			memcpy(rxbuf, pmessage->rxbuf, pmessage->size);
-			return pmessage->size;
+			len = pmessage->size;
+
+			return len;
 		}
 	}
 
 	return 0;
 }
+
+
+int upgrade_msg_pend(char *rxbuf, int size)
+{
+	int len = 0;
+	
+	len = __upgrade_msg_pend(rxbuf, size);
+	if (len > 0) 	
+	    __upgrade_msg_post("OK", 2);
+	
+	return len;
+}
+
+
+int upgrade_msg_post(char *txbuf, int len)
+{
+	char res[10] = {0};
+	unsigned short ovt_ms = 5000;
+	
+	__upgrade_msg_post(txbuf, len);
+	
+	while (ovt_ms--) {
+		if (__upgrade_msg_pend(res, 10) > 0)
+			return 0;
+		
+		vTaskDelay(1);
+	}
+	
+	return -1;
+}
+
 
 
 
@@ -120,6 +154,13 @@ int upgrade_query_trigger(char port, char *flag)
 }
 
 
+
+
+
+
+
+
+
 int upgrade_print(char *str)
 {
         int ret;
@@ -138,7 +179,7 @@ int upgrade_print(char *str)
         }
 
         if (arg.port == UPGRADE_PORT_WIFI) {
-                ret = upgrade_msg_post(str, 1);
+                ret = upgrade_msg_post(str, len);
                 if (ret < 0) {
                         print("upgrade wifi_send_byte error[%d]\r\n", ret);
                         return -1;
@@ -196,7 +237,8 @@ int upgrade_mem1_download_file(char *file_name, unsigned long *file_size)
         sprintf(temp, "%d", *file_size);
         upgrade_print(temp);
         upgrade_print("\r\n");
-
+	upgrade_print("system reboot!\r\n");
+	HAL_NVIC_SystemReset();
         return 0;
 }
 
@@ -335,12 +377,17 @@ int upgrade_trigger(char port)
 *******************************************************************************/
 void task_upgrade(void *pvParameters)
 {
-        upgrade_queue_creat();
-	upgrade_trigger(UPGRADE_PORT_COM);
+        char buff[10] = {0};
+	
+	upgrade_queue_creat();
+	upgrade_trigger(UPGRADE_PORT_WIFI);
         while(1) {
                 upgrade();
-                print("task_upgrade run!\r\n");
-                vTaskDelay(10000);
+		//upgrade_msg_post("likejhsy", 8);
+		//upgrade_msg_pend(buff, 10);
+		//memset(buff, 0, 10);8
+                //print("task_upgrade run!\r\n");
+                vTaskDelay(1000);
         }
 }
 

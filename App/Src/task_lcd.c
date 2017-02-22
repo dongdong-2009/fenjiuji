@@ -16,6 +16,7 @@
 #include "string.h"
 #include "stdio.h"
 #include "rtc.h"
+#include "task_lcd.h"
 
 #define LCD_RX_BUFF_SIZE 128
 #define LCD_TX_BUFF_SIZE 64
@@ -119,6 +120,9 @@ struct Frame_str
 
 static struct lcd_str lcd;
 static struct Frame_str frame;
+
+int g_wash_num = 0;                 //洗瓶编号
+int g_bottling_num = 0;             //装瓶编号
 
 //模拟数据
 const char *password1 ="111111";    //开机密码
@@ -1441,7 +1445,7 @@ static void deal_page_wash2(void)
         {
             //清洗命令
             //------
-
+            g_wash_num = bottle_num;
             //-------
         }
     }
@@ -1543,7 +1547,7 @@ static void deal_page_wash4(void)
         {
             //装瓶命令
             //------
-
+            g_bottling_num = bottle_num;
             //-------
         }
     }
@@ -2411,9 +2415,27 @@ static int lcd_show(void)
     return 0;
 }
 
-
-
-
+/******************************************************************************
+    功能说明：无
+    输入参数：无
+    输出参数：无
+    返 回 值：无
+*******************************************************************************/
+int lcd_author_judge(void)
+{
+  if((page_startup == lcd.page_present)||
+     (page_code1 == lcd.page_present)||
+     (page_lock == lcd.page_present)||
+     (page_code4 == lcd.page_present)||
+       (page_sleep_note == lcd.page_present))
+  {
+    return -1;
+  }
+  else
+  {
+    return 0;
+  }
+}
 
 /******************************************************************************
     功能说明：无

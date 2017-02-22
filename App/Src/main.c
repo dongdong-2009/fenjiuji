@@ -47,13 +47,13 @@ void show_msg(void)
 	print("\r\n\r\n");
 	print("\r\n\r\n");
 	print("\r\n**********************************************************************");
-	print("\r\n*									*");
-	print("\r\n*			      YiFuSi					*");
-	print("\r\n*									*");
-	print("\r\n*		   FenJiuJi Main Ctrl Unit App (Version 1.0.0)		*");
-	print("\r\n*									*");
-	print("\r\n*					     2016-11-20			*");
-	print("\r\n*									*");
+	print("\r\n*                                                                    *");
+	print("\r\n*                          YiFuSi                                    *");
+	print("\r\n*                                                                    *");
+	print("\r\n*               FenJiuJi Main Ctrl Unit APP  (Version 1.0.0)         *");
+	print("\r\n*                                                                    *");
+	print("\r\n*                                         2016-11-20                 *");
+	print("\r\n*                                                                    *");
 	print("\r\n**********************************************************************");
 	print("\r\n");
 	print("Programming Application runing!\r\n");
@@ -78,16 +78,16 @@ int main(void)
 	show_msg();
 
 	/* 创建以太网模块管理任务 */
-	xTaskCreate(task_ethernet, "eth", configMINIMAL_STACK_SIZE, NULL, 2, NULL);
+	//xTaskCreate(task_ethernet, "eth", configMINIMAL_STACK_SIZE, NULL, 2, NULL);
 
 	/* 创建wifi模块管理任务 */
 	xTaskCreate(task_wifi, "wifi", configMINIMAL_STACK_SIZE, NULL, 3, NULL);
 
 	/* 创建rtu任务 */
-	xTaskCreate(task_rtu, "rtu", configMINIMAL_STACK_SIZE, NULL, 4, NULL);
+	//xTaskCreate(task_rtu, "rtu", configMINIMAL_STACK_SIZE, NULL, 4, NULL);
 
 	/* 创建lcd任务 */
-	xTaskCreate(task_lcd, "lcd", configMINIMAL_STACK_SIZE, NULL, 4, NULL);
+	//xTaskCreate(task_lcd, "lcd", configMINIMAL_STACK_SIZE, NULL, 4, NULL);
 
 	/* 创建升级任务 */
 	xTaskCreate(task_upgrade, "upgrade", configMINIMAL_STACK_SIZE, NULL, 4, NULL);
@@ -96,13 +96,13 @@ int main(void)
 	//xTaskCreate(task_shell, "shell", configMINIMAL_STACK_SIZE, NULL, 6, NULL);
 
 	/* 创建divid_cup任务 */
-	xTaskCreate(task_divid_cup, "divid_cap", configMINIMAL_STACK_SIZE, NULL, 6, NULL);
+	//xTaskCreate(task_divid_cup, "divid_cap", configMINIMAL_STACK_SIZE, NULL, 6, NULL);
 
 	/* 创建temp ctrl 任务 */
-	xTaskCreate(task_temp_ctrl, "temp_ctrl", configMINIMAL_STACK_SIZE, NULL, 6, NULL);
+	//xTaskCreate(task_temp_ctrl, "temp_ctrl", configMINIMAL_STACK_SIZE, NULL, 6, NULL);
 
 	/* 创建daemon 任务 */
-	xTaskCreate(task_daemon, "task_daemon", configMINIMAL_STACK_SIZE, NULL, 7, NULL);
+	//xTaskCreate(task_daemon, "task_daemon", configMINIMAL_STACK_SIZE, NULL, 7, NULL);
 	
 	/* 任务调度 */
 	vTaskStartScheduler();

@@ -192,18 +192,18 @@ static int ymodem_receive_frame(char *rxbuf, int size, char port, char over_time
 //tcp port will receive this frame
 static int ymodem_receive_tcp_frame(char port)
 {
-	const char frame[6] = {0xFF, 0xFD, 0x00, 0xFF, 0xFB, 0x00};
+	const char frame[6] = {0xFF, 0xFD, 0x00, 0x00, 0x00, 0x00};
 	char rxframe[6] = {0};
 	int len;
 	char ovt_time = 30;
 	int ret;
 
-	while (ovt_time--) {
-		ret = ymodem_putchar('C', port);
-		if (ret < 0) {
-			Print("ymodem_putchar error[%d]\r\n", ret);
-			return -1;
-		}
+	while (1) {
+//		ret = ymodem_putchar('C', port);
+//		if (ret < 0) {
+//			Print("ymodem_putchar error[%d]\r\n", ret);
+//			return -1;
+//		}
 
 		len = ymodem_receive_frame(rxframe, 6, port, 3);
 		if (len < 0) {

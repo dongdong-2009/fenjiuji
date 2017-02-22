@@ -60,7 +60,23 @@ const struct stroe_param_map param_map[PARAM_MAX_NUM] =
     {"men_psw",      0x000080L,  16},
     
     {"press_max",    0x000090L,  16},
-    {"press_min",    0x0000A0L,  16},      
+    {"press_min",    0x0000A0L,  16},
+    
+    {"bebe1_1",      0x0000B0L,  16},
+    {"bebe1_2",      0x0000C0L,  16},
+    {"bebe1_3",      0x0000D0L,  16},
+    
+    {"bebe2_1",      0x0000E0L,  16},
+    {"bebe2_2",      0x0000F0L,  16},
+    {"bebe2_3",      0x000100L,  16},
+    
+    {"bebe3_1",      0x000100L,  16},
+    {"bebe3_2",      0x000110L,  16},
+    {"bebe3_3",      0x000120L,  16},
+    
+    {"bebe4_1",      0x000130L,  16},
+    {"bebe4_2",      0x000140L,  16},
+    {"bebe4_3",      0x000150L,  16},     
 };
 
 

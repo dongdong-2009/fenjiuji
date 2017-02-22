@@ -16,7 +16,7 @@
 struct upgrade_msg
 {
 	int len;
-	char *buff;
+	char buff[64];
 };
 
 extern QueueHandle_t xQueue_upgrade_fd;

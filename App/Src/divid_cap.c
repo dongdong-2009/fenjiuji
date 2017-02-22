@@ -24,7 +24,8 @@
  * 	1)向"压力调节器"发出打开总气阀命令，实时获取"压力调节器"的压力值，
  * 	  并将压力值下发给"酒头控制器"
  * 	2)压力值超出出酒阀值范围，LCD提示压力异常，出酒失败告警界面
- * 	3)压力值正常,下发出酒命令给"酒头控制器"，并实时获取酒头出酒的洒量，LCD实
+ * 	3)压力值正常,先下发出酒杯量(大中小杯)
+ *  4)下发出酒命令给"酒头控制器"，并实时获取酒头出酒的洒量，LCD实
  * 	  时更新剩余酒量。
  * 
  * 3.出酒结束
@@ -46,7 +47,7 @@
  * 装瓶清洗流程
  * ============
  * 1. 从LCD装瓶清洗界面的“清洗”按钮触发清洗功能
- * g
+ * 
  * 2. 向"压力调节器"发出打开总气阀命令，实时获取"压力调节器"的压力值，
  *    并将压力值下发给"酒头控制器"
  *   
@@ -86,23 +87,24 @@
 #include <timers.h>
 #include "bsp_uart.h"
 #include "store_param.h"
-#include "task_rtu.h"
+#include "task_lcd.h"
 
+#define CONFIG_DIVID_CUP_DEBUG
 
-//#define CONFIG_DIVID_CUP_DEBUG
-
+#define BOTTLE_COUNT_MAX      4
 
 #define PORT_CMD_RTU   		0
 #define PORT_CMD_LCD   		1
 #define RTU_GET_DIVID_ASK 	2
-#define LCD_GET_AUTHOR		3
-#define LCD_SHOW_ALARM_AUTHOR_LIMIT 4
-#define LCD_SHOW_BEBE 5
-#define LCD_SHOW_ALARM_UNDER_CAPACITY 6
-#define RTU_CTL_PRESS_SWITCH_ON	7
-#define RTU_GET_PRESS_VAL	8 
-#define LCD_SHOW_ALARM_PRESS_UNUSUAL 9
-#define RTU_GET_DIVID_CAP_SWITCH_ON 10
+#define RTU_CLEAR_DIVID_ASK 3
+#define LCD_GET_AUTHOR		4
+#define LCD_SHOW_ALARM_AUTHOR_LIMIT 5
+#define LCD_SHOW_BEBE 6
+#define LCD_SHOW_ALARM_UNDER_CAPACITY 7
+#define RTU_CTL_PRESS_SWITCH_ON	8
+#define RTU_GET_PRESS_VAL	9 
+#define LCD_SHOW_ALARM_PRESS_UNUSUAL 10
+#define RTU_GET_DIVID_CAP_SWITCH_ON 11
 #define RTU_GET_DIVID_CAP_PROCESS 12
 #define RTU_GET_DIVID_CAP_SWITCH_OFF 13
 #define LCD_CLEAR_BOTTLE_ASK 14
@@ -114,8 +116,9 @@
 #define RTU_SET_DIVID_CAP_BEBE_VALVE_OFF 20
 #define RTU_SET_PRESS_CTL_PUMP_GAS 21
 #define RTU_SET_DIVID_CAP_GAS_VALVE_OFF 22
-#define OFF 0
-#define ON 1
+#define	LCD_SHOW_GOTO_BEBE_SHOW 24
+#define LCD_SHOW_REFRESH_BEBE 25
+
 
 #ifdef CONFIG_DIVID_CUP_DEBUG
     #define print(fmt, args...) debug(fmt, ##args)
@@ -134,6 +137,7 @@ struct port_cmd_rtu
 			char enable;
 			unsigned short bebe;
 			unsigned short place;
+			char cmd_time;
 		} get_divid_cup;
 		
 		char press_val;
@@ -193,9 +197,27 @@ struct port_cmd_lcd
 
 
 int divid_cup_get_press_val_arg(unsigned short *arg_press_max_val, unsigned short *arg_press_min_val)
-{			
-	*arg_press_max_val = 100;
-	*arg_press_min_val = 200;
+{		
+	int len;
+	int ret;
+	
+	len = store_param_read("press_max", (char *)arg_press_max_val);
+	if (len == 0) 
+	{
+		*arg_press_max_val = 1023;
+		ret = store_param_save("press_max", (char *)arg_press_max_val, 2);
+		if (ret < 0)
+			return -1;
+	}	
+
+	len = store_param_read("press_min", (char *)arg_press_min_val);
+	if (len == 0) 
+	{
+		*arg_press_min_val = 10;
+		ret = store_param_save("press_min", (char *)arg_press_min_val, 2);
+		if (ret < 0)
+			return -1;
+	}	
 	
 	return 0;
 }
@@ -209,23 +231,56 @@ int divid_cup_get_bebe_capacity(char place)
 
 int __port_rtu_get_divid_ask(struct port_cmd_rtu *arg)
 {	
+	arg->sub.get_divid_cup.place = 1;
 	rtu_jiutou_dat_get(1, 0x13, &arg->sub.get_divid_cup.bebe);
-		
+	if (arg->sub.get_divid_cup.bebe > 0) { //酒头按钮按下
+		arg->sub.get_divid_cup.cmd_time++;
+		//按下时间大于一定时间就认为是有效的出酒命令
+		if (arg->sub.get_divid_cup.cmd_time > 10) { 
+			 arg->sub.get_divid_cup.cmd_time = 0;
+			 arg->sub.get_divid_cup.enable = 1;
+			 return 0;
+		}
+	}
+	
+	arg->sub.get_divid_cup.place = 2;
+	rtu_jiutou_dat_get(2, 0x13, &arg->sub.get_divid_cup.bebe);
+	if (arg->sub.get_divid_cup.bebe > 0) {
+		arg->sub.get_divid_cup.cmd_time++;
+		if (arg->sub.get_divid_cup.cmd_time > 10) {
+			 arg->sub.get_divid_cup.cmd_time = 0;
+			 arg->sub.get_divid_cup.enable = 1;
+			 return 0;
+		}
+	}
+	
 	return 0;
 }
 
+int __port_rtu_clear_divid_ask(struct port_cmd_rtu *arg)
+{	
+    //清除按键状态
+    //01/02 05 00 0B 00 00
+    rtu_jiutou_ctl_set(2, 0x000B, 0x0000);
+		
+	return 0;
+}
 
 int __port_rtu_ctl_press_switch_on(struct port_cmd_rtu *arg)
 {
 	//05
 	//01
+    	//打开压力调节器气体总阀
+    	//0A 05 00 01 FF 00
+	rtu_tiaoya_ctl_set(0x0A, 0x0001,0xFF00);	
+	
 	return 0;
 }
 
 int __port_rtu_get_press_val(struct port_cmd_rtu *arg)
 {
-	//03
-	//00
+	//0A 03 00 00 00 0x
+    rtu_tiaoya_dat_get(0x01, 0x00, &arg->sub.divid_cap.press_val);
 	return 0;
 }
 
@@ -233,7 +288,9 @@ int __port_rtu_get_press_val(struct port_cmd_rtu *arg)
 int __port_rtu_get_divid_cap_switch_on(struct port_cmd_rtu *arg)
 {
 	
-	//00 0A出酒指令
+	//出酒指令
+    //01/02 05 00 0A FF 00
+    rtu_jiutou_ctl_set(2, 0x000A, 0xff00);
 	return 0;
 }
 
@@ -263,6 +320,10 @@ int  divid_cup_port_rtu(struct port_cmd_rtu *arg)
 		ret = __port_rtu_get_divid_ask(arg);
 		break;
 		
+    	case RTU_CLEAR_DIVID_ASK:
+		ret = __port_rtu_clear_divid_ask(arg);
+		break;
+        
 	case RTU_CTL_PRESS_SWITCH_ON:
 		ret = __port_rtu_ctl_press_switch_on(arg);
 		break;
@@ -301,19 +362,37 @@ int  divid_cup_port_rtu(struct port_cmd_rtu *arg)
 
 int __port_lcd_clear_bottle_ask(struct port_cmd_lcd *arg)
 {
-	return 0;
+    int ret;
+    
+    if((g_wash_num < 0)||(g_wash_num > BOTTLE_COUNT_MAX))
+    {
+      return -1;
+    }
+    else
+    {
+      ret = g_wash_num;
+      g_wash_num = 0;
+    }
+    
+	return ret;
 }
 
 
 int __port_lcd_install_bottle_ask(struct port_cmd_lcd *arg)
 {
-	return 0;
-}
-
-
-int __port_lcd_get_author(struct port_cmd_lcd *arg)
-{
-	return 0;
+	int ret;
+    
+    if((g_bottling_num < 0)||(g_bottling_num > BOTTLE_COUNT_MAX))
+    {
+      return -1;
+    }
+    else
+    {
+      ret = g_bottling_num;
+      g_bottling_num = 0;
+    }
+    
+	return ret;
 }
 
 int __port_lcd_show_alarm_author_limit(struct port_cmd_lcd *arg)
@@ -412,121 +491,43 @@ static int divid_cup_port(char cmd, unsigned long arg)
 }
 
 
-
-int rtu_get_press_val(unsigned short *press_val)
-{
-	rtu_tiaoya_dat_get(0x0A, 0x0000, press_val);
-	return 0;
-}
-
-int rtu_set_press_ctl_main_gas_valve(char mode)
-{
-	if (mode == ON)
-		rtu_tiaoya_ctl_set(0x0A, 0x0001, 0xFF00);
-	else 
-		rtu_tiaoya_ctl_set(0x0A, 0x0001, 0x0000);
-	return 0;
-}
-
-
-int rtu_set_divid_cap_gas_valve(char place, char mode)
-{
-	if (mode == ON)
-		rtu_jiutou_ctl_set(place, 0x0001, 0xFF00);
-	else 
-		rtu_jiutou_ctl_set(place, 0x0001, 0x0000);
-	return 0;
-}
-
-
-int rtu_set_divid_cap_bebe_valve_off(char place,char mode)
-{
-	if (mode == ON)
-		rtu_jiutou_ctl_set(place, 0x0001, 0xFF00);
-	else 
-		rtu_jiutou_ctl_set(place, 0x0001, 0x0000);
-	return 0;
-}
-
-
-
-int rtu_set_press_ctl_pump_gas(char mode)
-{
-	if (mode == ON)
-		rtu_tiaoya_ctl_set(0x0A, 0x0003, 0xFF00);
-	else 
-		rtu_tiaoya_ctl_set(0x0A, 0x0003, 0x0000);
-	return 0;
-}
-
-
-static int rtu_jiutou_bebe_ask_query(char place)
-{
-	unsigned short  bebe_num = 0;
-	
-	rtu_jiutou_dat_get(place, 0x0013, &bebe_num);
-	
-	return (int)bebe_num;
-}
-
-
-static int rtu_jiutou_bebe_ask_clear(char place)
-{
-	rtu_jiutou_ctl_set(place, 0x000B, 0xFF00);
-	return 0;
-}
-
-
-int rtu_ctl_press_switch_on(char mode)
-{	
-	if (mode == ON)
-		rtu_tiaoya_ctl_set(0x0A, 0x0001,0xFF00);
-	else 
-		rtu_tiaoya_ctl_set(0x0A, 0x0001,0x0000);
-	return 0;	
-}
-
-int rtu_get_divid_cap_switch(char place, char mode)
-{
-	if (mode == ON)
-		rtu_jiutou_ctl_set(place, 0x000A,0xFF00);
-	else 
-		rtu_jiutou_ctl_set(place, 0x000A,0x0000);
-	return 0;	
-}
-
-
-int rtu_get_divid_cap_bebe_time(char place, unsigned long *time)
-{
-	unsigned short high;
-	unsigned short low;
-	
-	rtu_jiutou_dat_get(place, 0x000F, &high);
-	rtu_jiutou_dat_get(place, 0x000F, &low);
-	*time = high * 0x10000 + low;
-	return 0;
-}
-
-
 int divid_cup_install_bottle_inflat(char place)
 {
+	int ret;
 	char ovt_sec = 10;
+	struct port_cmd_rtu arg;
 	unsigned short arg_press_max_val;
 	unsigned short arg_press_min_val;		
 	
-	rtu_set_press_ctl_main_gas_valve(ON);
+	arg.cmd = RTU_SET_PRESS_CTL_MAIN_GAS_VALVE_ON;
+	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
+	if (ret < 0) {
+		print("rtu_set_press_ctl_main_gas_valve_on, error[%d]\r\n", 
+			ret);
+		return -1;
+	}	
 	
-	divid_cup_get_press_val_arg(&arg_press_max_val, &arg_press_min_val);
+	ret = divid_cup_get_press_val_arg(&arg_press_max_val, &arg_press_min_val);
+	if (ret < 0) {
+		print("divid_cup_get_press_val_arg error[%d]\r\n", ret);
+		return -1;
+	}		
 				
 	while (ovt_sec--) {
-		unsigned short last_press_val = 0;
-		unsigned short press_val = 0;
+		char last_press_val = 255;
+		char press_val;
 		
-		rtu_get_press_val(&press_val);			
+		arg.cmd = RTU_GET_PRESS_VAL;
+		ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
+		if (ret < 0) {
+			print("rtu_ctl_press_switch_on, error[%d]\r\n", ret);
+			return -1;
+		}			
+		
+		press_val = arg.sub.press_val;
 		if ((press_val > arg_press_min_val) 
 			&& (press_val < arg_press_max_val)) {
-			
-			break;		
+			return -1;		
 		}		
 		
 		if (press_val == last_press_val)
@@ -535,7 +536,15 @@ int divid_cup_install_bottle_inflat(char place)
 		last_press_val = press_val;
 	}
 	
-	rtu_set_press_ctl_main_gas_valve(OFF);
+	arg.cmd = RTU_SET_PRESS_CTL_MAIN_GAS_VALVE_OFF;
+	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
+	if (ret < 0) {
+		print("rtu_set_press_ctl_main_gas_valve_off, error[%d]\r\n", 
+			ret);
+		return -1;
+	}
+
+	
 	
 	return 0;		
 }
@@ -543,65 +552,173 @@ int divid_cup_install_bottle_inflat(char place)
 
 /* pump the air from bottle */
 int divid_cup_install_bottle_pump(char place)
-{		
-	rtu_set_press_ctl_main_gas_valve(OFF);	
-	rtu_set_divid_cap_gas_valve(place, ON);		
-	rtu_set_divid_cap_bebe_valve_off(place, OFF);			
-	rtu_set_press_ctl_pump_gas(ON);	
-	vTaskDelay(5000);		
-	rtu_set_divid_cap_gas_valve(place, OFF);		
+{
+	int ret;
+	struct port_cmd_rtu arg;
+		
+	arg.cmd = RTU_SET_PRESS_CTL_MAIN_GAS_VALVE_OFF;
+	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
+	if (ret < 0) {
+		print("rtu_set_press_ctl_main_gas_valve_off, error[%d]\r\n", 
+			ret);
+		return -1;
+	}
+
+	arg.cmd = RTU_SET_DIVID_CAP_GAS_VALVE_ON;
+	arg.sub.divid_cap_gas_valve.place = place;
+	if (ret < 0) {
+		print("rtu_set_divid_cap_air_switch_off, error[%d]\r\n", ret);
+		return -1;
+	}	
+	
+	arg.cmd = RTU_SET_DIVID_CAP_BEBE_VALVE_OFF;
+	arg.sub.divid_cap_bebe_valve.place = place;
+	if (ret < 0) {
+		print("rtu_set_divid_cap_bebe_valve_off, error[%d]\r\n", ret);
+		return -1;
+	}	
+	
+	arg.cmd = RTU_SET_PRESS_CTL_PUMP_GAS;
+	if (ret < 0) {
+		print("rtu_set_press_ctl_pump_gas, error[%d]\r\n", ret);
+		return -1;
+	}	
+	
+	arg.cmd = RTU_SET_DIVID_CAP_GAS_VALVE_OFF;
+	arg.sub.divid_cap_gas_valve.place = place;
+	if (ret < 0) {
+		print("rtu_set_divid_cap_air_switch_off, error[%d]\r\n", ret);
+		return -1;
+	}
+	
 	return 0;
 }
 
 
-
-static int divid_cup_cmd_check(char *bebe, char *place)
+int get_bebe_val(unsigned short *bebe, char place, char bebe_cmd)
 {
-	struct port_cmd_lcd lcd_arg;     	
-	char time[2] = {0};
+	int len;
 	int ret;
 	
-	while (1) {				
-		ret = rtu_jiutou_bebe_ask_query(1);				
-		if (ret > 0) {
-			time[0]++;
-			if (time[0] > 10) {
-			 	time[0] = 0;
-				*place = 1;
-				*bebe = (char)ret;
-				rtu_jiutou_bebe_ask_clear(1);
-				return 1;
-			}
-		} else {
-			time[0] = 0;
-		}
+	if (place == 1) {
+		if (bebe_cmd == 1) {	
+			len = store_param_read("bebe1_1", (char *)bebe);
+			if (len == 0) {
+				*bebe = 10;
+				ret = store_param_save("bebe1_1", (char *)bebe, 2);
+				if (ret < 0)
+					return -1;
 				
-		ret = rtu_jiutou_bebe_ask_query(2);		
-		if (bebe > 0) {
-			time[1]++;
-			if (time[1] > 10) {
-			 	time[1] = 0;
-				rtu_jiutou_bebe_ask_clear(2);	
-				*place = 2;
-				return 1;
+				return 0;
 			}
-		} else {
-			time[1] = 0;
+		}
+		
+		if (bebe_cmd == 2) {	
+			len = store_param_read("bebe1_2", (char *)bebe);
+			if (len == 0) {
+				*bebe = 20;
+				ret = store_param_save("bebe1_2", (char *)bebe, 2);
+				if (ret < 0)
+					return -1;
+			}
+		}
+		
+		if (bebe_cmd == 3) {	
+			len = store_param_read("bebe1_3", (char *)bebe);
+			if (len == 0) {
+				*bebe = 30;
+				ret = store_param_save("bebe1_3", (char *)bebe, 2);
+				if (ret < 0)
+					return -1;
+			}
+		}	
+	}
+	
+	if (place == 2) {
+		if (bebe_cmd == 1) {	
+			len = store_param_read("bebe2_1", (char *)bebe);
+			if (len == 0) {
+				*bebe = 10;
+				ret = store_param_save("bebe2_1", (char *)bebe, 2);
+				if (ret < 0)
+					return -1;
+			}
+		}
+		
+		if (bebe_cmd == 2) {	
+			len = store_param_read("bebe2_2", (char *)bebe);
+			if (len == 0) {
+				*bebe = 20;
+				ret = store_param_save("bebe2_2", (char *)bebe, 2);
+				if (ret < 0)
+					return -1;
+			}
+		}
+		
+		if (bebe_cmd == 3) {	
+			len = store_param_read("bebe2_3", (char *)bebe);
+			if (len == 0) {
+				*bebe = 30;
+				ret = store_param_save("bebe2_3", (char *)bebe, 2);
+				if (ret < 0)
+					return -1;
+			}
+		}	
+	}
+	
+	return -1;
+}
+
+
+
+
+static int divid_cup_cmd_check(unsigned short *bebe, char *place)
+{
+	struct port_cmd_rtu arg;
+	struct port_cmd_lcd lcd_arg;
+        int ret;
+	char divid_up_cmd_time = 0;
+	
+	while (1) {
+		
+		/* 获取酒头的出洒命令 */
+		arg.cmd = RTU_GET_DIVID_ASK;
+		ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
+		if (ret < 0) {
+			print("rtu_get_divid_ask, error[%d]\r\n", ret);
+			return -1;
 		}		
 		
+		/* 出酒命令有效 */
+		if (arg.sub.get_divid_cup.enable) { 
+			arg.sub.get_divid_cup.enable = 0;
+			
+			/* 清除出酒指令 */
+			arg.cmd = RTU_CLEAR_DIVID_ASK;
+                	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
+                	if (ret < 0) {
+                    		print("rtu_clear_divid_ask, error[%d]\r\n", ret);
+                    		return -1;
+                	}
+				
+			/* 计算出实际的出酒值 */
+			get_bebe_val(bebe, arg.sub.get_divid_cup.place, arg.sub.get_divid_cup.bebe);
+			return 1;			
+		} 
 		
+				
 		/*  clear bottle ask from LCD  */
-		lcd_arg.cmd = LCD_CLEAR_BOTTLE_ASK;
+		arg.cmd = LCD_CLEAR_BOTTLE_ASK;
 		ret = divid_cup_port(PORT_CMD_LCD, (unsigned long)&lcd_arg);
 		if (ret < 0) {
 			print("divid_cup_port, error[%d]\r\n", ret);
 			return -1;
 		}		
 		if (lcd_arg.sub.clear_bottle.enable)
-			break;	
+			//break;	
 		
 		/*  install bottle ask from LCD  */
-		lcd_arg.cmd = LCD_INSTALL_BOTTLE_ASK;
+		arg.cmd = LCD_INSTALL_BOTTLE_ASK;
 		ret = divid_cup_port(PORT_CMD_LCD, (unsigned long)&lcd_arg);
 		if (ret < 0) {
 			print("divid_cup_port, error[%d]\r\n", ret);
@@ -627,7 +744,7 @@ static int divid_cup_cmd_check(char *bebe, char *place)
 				print("divid_cup_install_bottle_inflat,\
 					error[%d]\r\n",
 					ret);
-				return -1;
+				//return -1;
 			}			
 		}	
 		
@@ -638,7 +755,7 @@ static int divid_cup_cmd_check(char *bebe, char *place)
 }
 
 
-static int divid_cup_judge(char bebe, char place)
+static int divid_cup_judge(unsigned short bebe, char place)
 {
 	struct port_cmd_lcd arg;
 	int total_capacity;
@@ -697,7 +814,8 @@ static int divid_cup_judge(char bebe, char place)
 }
 
 
-static int divid_cup(char bebe, char place)
+
+static int divid_cup(unsigned short bebe, char place)
 {
 	struct port_cmd_rtu arg;
 	char ovt_100ms = 5;
@@ -705,18 +823,31 @@ static int divid_cup(char bebe, char place)
 	unsigned short arg_press_min_val;
 	unsigned short press_val = 0;
 	int ret;
+		
+	arg.cmd = RTU_CTL_PRESS_SWITCH_ON;
+	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
+	if (ret < 0) {
+		print("rtu_ctl_press_switch_on, error[%d]\r\n", ret);
+		return -1;
+	}	
 	
-	rtu_set_press_ctl_main_gas_valve(ON);
-			
+	//获取压力上下限
 	ret = divid_cup_get_press_val_arg(&arg_press_max_val, &arg_press_min_val);
 	if (ret < 0) {
 		print("divid_cup_get_press_val_arg error[%d]\r\n", ret);
 		return -1;
 	}		
 	
-	
+	//查询压力值
 	while (ovt_100ms--) {
-		rtu_get_press_val(&press_val);				
+		arg.cmd = RTU_GET_PRESS_VAL;
+		ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
+		if (ret < 0) {
+			print("rtu_ctl_press_switch_on, error[%d]\r\n", ret);
+			return -1;
+		}			
+		
+		press_val = arg.sub.press_val;
 		if ((press_val > arg_press_min_val) 
 			&& (press_val < arg_press_max_val)) {
 			break;		
@@ -724,7 +855,8 @@ static int divid_cup(char bebe, char place)
 		
 		vTaskDelay(100);
 	}
-		
+	
+	
 	if ((press_val <= arg_press_min_val) 
 			|| (press_val >= arg_press_max_val)) {
 
@@ -736,10 +868,19 @@ static int divid_cup(char bebe, char place)
 		}		
 		
 		print("divid_cup_judge press_unusual!\r\n");
-		return -1;		
+		//return -1;		
 	}
 	
-	rtu_get_divid_cap_switch(place, ON);			
+	/* 向酒头发送出酒指令 */		
+	arg.cmd = RTU_GET_DIVID_CAP_SWITCH_ON;
+	arg.sub.divid_cap.bebe = bebe;
+	arg.sub.divid_cap.place = place;
+	arg.sub.divid_cap.press_val = press_val;
+	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
+	if (ret < 0) {
+		print("rtu_get_divid_cap_switch_on, error[%d]\r\n", ret);
+		return -1;
+	}			
 		
 	return 0;
 }
@@ -760,28 +901,71 @@ static int divid_cup_end(char bebe, char place)
 		print("divid_cup_get_press_val_arg error[%d]\r\n", ret);
 		return -1;
 	}	
-		
+	
+	/* 提示LCD进入显示酒量界面 */
+	arg.cmd = LCD_SHOW_GOTO_BEBE_SHOW;
+	ret = divid_cup_port(PORT_CMD_LCD, (unsigned long)&arg);
+	if (ret < 0) {
+		return -1;
+	}		
+	
+	
 	while (ovt_100ms--) {
-		unsigned long time;
 		
-		rtu_get_press_val(&press_val);						
+		arg.cmd = RTU_GET_PRESS_VAL;
+		ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
+		if (ret < 0) {
+			print("rtu_ctl_press_switch_on, error[%d]\r\n", ret);
+			return -1;
+		}			
+		
 		press_val = arg.sub.press_val;
 		if ((press_val > arg_press_min_val) 
 			&& (press_val < arg_press_max_val)) {
-			divid_cup_res = 2;
+			divid_cup_res = -1;
 			break;		
 		}		
 		
-		rtu_get_divid_cap_bebe_time(place, &time);		
-		if (time == 0) {
+		
+		/* 提示LCD刷新显示酒量界面 */
+		arg.cmd = LCD_SHOW_REFRESH_BEBE;
+		ret = divid_cup_port(PORT_CMD_LCD, (unsigned long)&arg);
+		if (ret < 0) {
+			return -1;
+		}		
+			
+		/* 从酒头获取出酒量 */
+		arg.cmd = RTU_GET_DIVID_CAP_PROCESS;		
+		arg.sub.divid_cap_pro.place = place;
+		arg.sub.divid_cap_pro.bebe = 0;	
+		arg.sub.divid_cap_pro.res = 0;	
+		
+		ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
+		if (ret < 0) {
+			print("rtu_get_divid_cap_switch_on, error[%d]\r\n", ret);
+			return -1;
+		}
+		
+		if (arg.sub.divid_cap_pro.res == 1) {
 			divid_cup_res = 1;
 			break;
+		}
+		
+		if (arg.sub.divid_cap_pro.bebe >= bebe) {
+			divid_cup_res = 2;
+			break;		
 		}
 		
 		vTaskDelay(100);
 	}
 	
-	rtu_get_divid_cap_switch(place, OFF);	
+	/* 发送命令关闭出酒 */
+	arg.cmd = RTU_GET_DIVID_CAP_SWITCH_OFF;
+	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
+	if (ret < 0) {
+		print("rtu_get_divid_cap_switch_on, error[%d]\r\n", ret);
+		return -1;
+	}	
 	
 	if (divid_cup_res == 1) {
 		arg.cmd = LCD_SHOW_ALARM_PRESS_UNUSUAL;
@@ -807,7 +991,7 @@ static int divid_cup_end(char bebe, char place)
 int divid_cup_ctrl(void)
 {
 	int ret;
-	char bebe;
+	unsigned short bebe;
 	char place;
 	
 	ret = divid_cup_cmd_check(&bebe, &place);
@@ -838,7 +1022,12 @@ int divid_cup_ctrl(void)
  }
  
  
-
+ /******************************************************************************
+    功能说明：无
+    输入参数：无
+    输出参数：无
+    返 回 值：无
+*******************************************************************************/
 void task_divid_cup(void *pvParameters)
 {
      

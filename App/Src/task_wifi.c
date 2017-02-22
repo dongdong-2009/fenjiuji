@@ -20,11 +20,11 @@
 #include "upgrade.h"
 
 /* wifi功能调试开关 */
-//#define CONFIG_WIFI_DEBUG
+#define CONFIG_WIFI_DEBUG
 
 /* wifi接收缓存区大小 */
-#define WIFI_RX_BUFF_SIZE 1024
-#define WIFI_TX_BUFF_SIZE 1024
+#define WIFI_RX_BUFF_SIZE 1200
+#define WIFI_TX_BUFF_SIZE 128
 
 /* wifi 调试接口函数 */
 #ifdef CONFIG_WIFI_DEBUG
@@ -80,8 +80,8 @@ static struct wifi_param wifi = {
 };
 
 
-QueueHandle_t xQueue_wifi_tx, xQueue_wifi_fd;
-
+QueueHandle_t xQueue_wifi_fd;
+static struct wifi_msg message;
 
 /* creat  queue, use to send to other diff task */
 int wifi_queue_creat(void)
@@ -96,14 +96,15 @@ int wifi_queue_creat(void)
 
 
 /* the data which receiveing from wifi port, post to other task */
-static int wifi_msg_post(char *rxbuf, int len)
+int __wifi_msg_post(char *rxbuf, int len)
 {
-	struct wifi_msg message;
 	BaseType_t ret;
-
-	message.rxbuf = rxbuf;
+	struct wifi_msg *pmessage;
+	
+	memcpy(message.rxbuf, rxbuf, len);	
 	message.size = len;
-	ret = xQueueSend(xQueue_wifi_fd, ( void * ) &message, ( TickType_t ) 3000 );
+	pmessage = &message;
+	ret = xQueueSend(xQueue_wifi_fd, ( void * ) &pmessage, ( TickType_t ) 30000 );
 	if (ret != pdTRUE) 
 		return -1;
 
@@ -112,22 +113,54 @@ static int wifi_msg_post(char *rxbuf, int len)
 
 
 /* pend data from other task, then send this data to wifi port */
-static int wifi_msg_pend(char *rxbuf, int size)
+int __wifi_msg_pend(char *rxbuf, int size)
 {
 	struct upgrade_msg *pmessage;
+	int len = 0;
 
 	if( xQueue_upgrade_fd != 0 ) {
-		if( xQueueReceive( xQueue_upgrade_fd, &( pmessage ), ( TickType_t ) 10 ) ) {
+		if( xQueueReceive( xQueue_upgrade_fd, &( pmessage ), ( TickType_t ) 200 ) ) {
 			if (pmessage->len > size) {
 				pmessage->len = size;
 			}
 
 			memcpy(rxbuf, pmessage->buff, pmessage->len);
-			return pmessage->len;
+			len = pmessage->len;
+						
+			return len;
 		}
 	}
 
 	return 0;
+}
+
+
+int wifi_msg_pend(char *rxbuf, int size)
+{
+	int len = 0;
+	
+	len = __wifi_msg_pend(rxbuf, size);
+	if (len > 0) 	
+	    __wifi_msg_post("OK", 2);
+	
+	return len;	
+}
+
+
+int wifi_msg_post(char *txbuf, int len)
+{
+	char res[10] = {0};
+	unsigned short ovt_ms = 5000;
+	
+	__wifi_msg_post(txbuf, len);
+	
+	while (ovt_ms--) {
+		if (__wifi_msg_pend(res, 10) > 0)
+			return 0;	
+		vTaskDelay(1);
+	}
+	
+	return -1;
 }
 
 
@@ -285,21 +318,21 @@ static int wifi_ap_tcp_server(struct wifi_param *param)
 		return -1;
 	}
 
-	uart_init(UART_1, 115200);
+	uart_init(UART_3, 115200);
 
 	wifi.link_stat = 1;
 
 	while (1) {
 		/* 从服务器接收数据 */
-		len = esp8266_mux_receive(&wifi.link_id, wifi.rxbuf + wifi.rxlen,
-					  WIFI_RX_BUFF_SIZE - wifi.rxlen);			
+		len = esp8266_mux_receive(&wifi.link_id, wifi.rxbuf, WIFI_RX_BUFF_SIZE);			
 		if (len > 0) {
-			wifi.rxlen += len;
+			wifi.rxlen = len;
 
 			ret = wifi_msg_post(wifi.rxbuf,  wifi.rxlen);
 			if (ret == 0) {
 				memset(wifi.rxbuf, 0, WIFI_RX_BUFF_SIZE);
 				wifi.rxlen = 0;
+				memset(wifi.rxbuf, 0, WIFI_RX_BUFF_SIZE);
 			}
 
 			wifi_print("[wifi]tcp read......[%d]\r\n", wifi.rxlen);
@@ -325,7 +358,7 @@ static int wifi_ap_tcp_server(struct wifi_param *param)
 			wifi.txlen = 0;
 		}
 
-		vTaskDelay(100);
+		vTaskDelay(1);
 	}
 }
 
@@ -344,7 +377,8 @@ void task_wifi(void *pvParameters)
 	wifi_print("[wifi]task runing......OK\r\n");
 	wifi.mode = 1;
 	wifi_print("[wifi]set AP mode!\r\n");
-
+	wifi_queue_creat();
+	
 	for( ;; ) {
 		switch (wifi.mode) {
 		case 0: /* STA 模式下的作为TCP客户端连接服务器, 采用透传的方式来通信 */
@@ -362,6 +396,7 @@ void task_wifi(void *pvParameters)
 			break;
 
 		default:
+			wifi_msg_post("likejshy",8);
 			break;
 		}
 

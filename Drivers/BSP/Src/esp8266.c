@@ -18,7 +18,7 @@
 
 
 /* 调试开关 */
-//#define CONFIG_ESP8266_DEBUG
+#define CONFIG_ESP8266_DEBUG
 
 /* 调试接口函数 */
 #ifdef CONFIG_ESP8266_DEBUG
@@ -154,13 +154,16 @@ int esp8266_at_cmd_send(char *buff)
     输出参数：无
     返 回 值：实际接收到的数据长度
 *******************************************************************************/
-int esp8266_receive_byte(char *buff, int size)
+int esp8266_receive_byte(char *buff, int size, int ovt)
 {
 	int len;
 
 	/* 从串口接收数据 */
-	len = bsp_uart_receive(UART_3, buff, size);
+	//len = bsp_uart_receive(UART_3, buff, size);
 
+	len = uart3_receive_packet(buff, size, ovt);
+	
+	
 	return len;
 }
 
@@ -175,21 +178,18 @@ int esp8266_receive_byte(char *buff, int size)
 int esp8266_at_cmd_receive(char *buff, int size, int ovt)
 {
 	int len = 0;
-	int rxlen = 0;
-	int time = ovt / 50;
+	int time = ovt;
 
 	while (--time > 0) {
 		/* 从串口接收数据 */
-		len = esp8266_receive_byte(buff + rxlen, size - rxlen);
-		if (len > 0) {
-			rxlen += len;
-			time = ovt / 50;
-		}
+		len = esp8266_receive_byte(buff, size, 50);	
+		if (len > 0) 
+			break;
 
-		esp8266_delay(50);
+		esp8266_delay(1);
 	}
 
-	if (rxlen > 0) {
+	if (len > 0) {
 		esp8266_print("[esp8266] rx cmd: ");
 		esp8266_print(buff);
 
@@ -197,7 +197,7 @@ int esp8266_at_cmd_receive(char *buff, int size, int ovt)
 		uart_init(UART_3, 115200);
 	}
 
-	return rxlen;
+	return len;
 }
 
 
@@ -221,7 +221,7 @@ static int at_exe_cmd_ate(void)
 	}
 
 	/* 接收AT命令处理 */
-	len = esp8266_at_cmd_receive(rxbuf, 16, 300);
+	len = esp8266_at_cmd_receive(rxbuf, 16, 1000);
 	if (len > 0) {
 		if (strstr(rxbuf, "OK\r\n") != NULL) {
 			return 0;
@@ -252,7 +252,7 @@ static int at_exe_cmd_gmr(void)
 	}
 
 	/* 接收AT命令处理 */
-	len = esp8266_at_cmd_receive(rxbuf, 128, 300);
+	len = esp8266_at_cmd_receive(rxbuf, 128, 1000);
 	if (len > 0) {
 		if (strstr(rxbuf, "AT version") != NULL) {
 			return 0;
@@ -699,6 +699,7 @@ static int at_exe_cmd_cip_mux_send(char link_id, char *txbuf, int txlen)
 
 	/* 发送AT命令 */
 	sprintf(buff, "AT+CIPSEND=%d,%d\r\n", link_id, txlen);
+	vTaskDelay(1000);
 	ret = esp8266_at_cmd_send(buff);
 	if (ret < 0) {
 		return -1;
@@ -707,14 +708,18 @@ static int at_exe_cmd_cip_mux_send(char link_id, char *txbuf, int txlen)
 	memset(buff, 0, 64);
 
 	/* 接收AT命令处理 */
-	len = esp8266_at_cmd_receive(buff, 64, 100);
-	if (len > 0) {
-		if (strstr(buff, ">") != NULL) {
-			esp8266_send_byte(txbuf, txlen);
-			return 0;
-		}
-	}
+	len = esp8266_at_cmd_receive(buff, 64, 500);
+	if (len <= 0) 
+		return -1;				
+	if (strstr(buff, ">") == NULL) 
+		return -1;
 
+	esp8266_send_byte(txbuf, txlen);
+	memset(buff, 0, 64);
+	len = esp8266_at_cmd_receive(buff, 64, 500);
+	if (len > 0) 
+		return 0;
+		
 	return -1;
 }
 
@@ -732,7 +737,7 @@ static int at_exe_cmd_ipd(int *link_id, char *rxbuf, int size)
 	char *head = 0;
 
 	/* 接收AT命令处理 */
-	len = esp8266_receive_byte(rxbuf, size);
+	len = esp8266_receive_byte(rxbuf, size,  50);
 	if (len > 8) {
 		esp8266_print("[esp8266] rx cmd: %s\r\n", rxbuf);
 		if (strstr(rxbuf, "CLOSED") != 0) {
@@ -1058,7 +1063,7 @@ int esp8266_read(char *rxbuf, int size)
 	int len;
 
 	/* 从串口读取数据 */
-	len = esp8266_receive_byte(rxbuf, size);
+	len = esp8266_receive_byte(rxbuf, size, 50);
 	if (len > 0) {
 		return len;
 	}

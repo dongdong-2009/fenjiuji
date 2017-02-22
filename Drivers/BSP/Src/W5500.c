@@ -78,12 +78,12 @@ int w5500_gpio_init(void)
 	HAL_GPIO_Init(GPIOA, &GPIO_InitStructure);
 
 	/* PA12 --> INT */
-	__HAL_RCC_GPIOA_CLK_ENABLE();
+	//__HAL_RCC_GPIOA_CLK_ENABLE();
 
-	GPIO_InitStructure.Mode = GPIO_MODE_IT_FALLING;
-	GPIO_InitStructure.Pull = GPIO_PULLUP;
-	GPIO_InitStructure.Pin = GPIO_PIN_12;
-	HAL_GPIO_Init(GPIOA, &GPIO_InitStructure);
+	//GPIO_InitStructure.Mode = GPIO_MODE_IT_FALLING;
+	//GPIO_InitStructure.Pull = GPIO_PULLUP;
+	//GPIO_InitStructure.Pin = GPIO_PIN_12;
+	//HAL_GPIO_Init(GPIOA, &GPIO_InitStructure);
 
 	/* Enable and set EXTI line 0 Interrupt to the lowest priority */
 	//HAL_NVIC_SetPriority(EXTI4_IRQn, 2, 0);
