@@ -105,9 +105,8 @@ static int temp_ctl_port_rtu(struct port_cmd_rtu *arg)
 	int ret;
 	
 	switch (arg->cmd) {
-//	case LCD_SOW_TEMP:
-//		ret = temp_ctl_port_lcd(arg);
-//		break;	
+	case LCD_SOW_TEMP:
+		break;	
 	default:
 		break;
 	}

@@ -76,7 +76,11 @@ const struct stroe_param_map param_map[PARAM_MAX_NUM] =
     
     {"bebe4_1",      0x000130L,  16},
     {"bebe4_2",      0x000140L,  16},
-    {"bebe4_3",      0x000150L,  16},     
+    {"bebe4_3",      0x000150L,  16},  
+
+    {"tota1",      0x000160L,  16}, /* 1号酒位总的酒量 */
+    {"tota2",      0x000170L,  16}, /* 2号酒位总的酒量 */
+    {"tota3",      0x000180L,  16}, /* 3号酒位总的酒量 */
 };
 
 

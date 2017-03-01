@@ -88,6 +88,8 @@
 #include "bsp_uart.h"
 #include "store_param.h"
 #include "task_lcd.h"
+#include "task_rtu.h"
+#include "divid_cup.h"
 
 #define CONFIG_DIVID_CUP_DEBUG
 
@@ -119,6 +121,18 @@
 #define	LCD_SHOW_GOTO_BEBE_SHOW 24
 #define LCD_SHOW_REFRESH_BEBE 25
 
+#define RTU_CTL_PRESS_SWITCH_OFF	26
+
+#define RTU_JIUTOU_GAS_SWITCH_ON  27
+#define RTU_JIUTOU_GAS_SWITCH_OFF 28
+
+#define RTU_JIUTOU_BEBE_VALVE_ON 29
+#define RTU_JIUTOU_BEBE_VALVE_OFF 30
+
+//压力调节器抽真空电磁阀
+#define RTU_TIAOYA_PUMP_VALVE_ON 31
+#define RTU_TIAOYA_PUMP_VALVE_OFF 32
+
 
 #ifdef CONFIG_DIVID_CUP_DEBUG
     #define print(fmt, args...) debug(fmt, ##args)
@@ -139,20 +153,22 @@ struct port_cmd_rtu
 			unsigned short place;
 			char cmd_time;
 		} get_divid_cup;
-		
+							
 		char press_val;
 		
 		struct 
 		{
-			char press_val;
-			char bebe;
+			unsigned short press_val;
+		  	unsigned short bebe_ml; /* 目标出酒量 */
+			unsigned short bebe;
+			unsigned short bebe_ml_now; 
 			char place;
 		} divid_cap;
 		
 		struct 
 		{
 			char res;
-			char bebe;
+			unsigned short bebe;
 			char place;
 		} divid_cap_pro;
 		
@@ -165,6 +181,12 @@ struct port_cmd_rtu
 		{
 			char place;
 		} divid_cap_bebe_valve;
+		
+		struct 
+		{
+			char place;
+		} jiutou;
+		
 	} sub;	
 };
 
@@ -182,9 +204,12 @@ struct port_cmd_lcd
 			char place;		
 		} show_bebe;
                 
+		/* 从LCD获取洗瓶指令需要用到的数据 */
                 struct 
                 {
-                        char enable;
+                        unsigned short bebe;
+			unsigned char place;
+			char enable;
                 } clear_bottle;      
                 
                 struct
@@ -194,6 +219,11 @@ struct port_cmd_lcd
                 } install_bottle;
 	} sub;
 };
+
+
+
+
+struct divid_cup_info_str divid_cup_info;
 
 
 int divid_cup_get_press_val_arg(unsigned short *arg_press_max_val, unsigned short *arg_press_min_val)
@@ -223,15 +253,46 @@ int divid_cup_get_press_val_arg(unsigned short *arg_press_max_val, unsigned shor
 }
 
 
-int divid_cup_get_bebe_capacity(char place)
+static unsigned short divid_cup_get_bebe_capacity(char place)
 {
-	return 0;
+	int len = 0;
+	int ret;
+	unsigned short bebe = 0;
+	
+	/* 1号酒位 */
+	if (place == 1) {
+		/* 取出总的酒量 */	
+		len = store_param_read("tota1", (char *)&bebe);
+		if (len == 0) {
+			bebe = 1000;
+			ret = store_param_save("tota1", (char *)&bebe, 2);
+			if (ret < 0)
+				return -1;
+				
+			return bebe;
+		}			
+	}
+
+	/* 2号酒位 */
+	if (place == 2) {
+		/* 取出总的酒量 */	
+		len = store_param_read("tota2", (char *)&bebe);
+		if (len == 0) {
+			bebe = 1000;
+			ret = store_param_save("tota2", (char *)&bebe, 2);
+			if (ret < 0)
+				return -1;
+				
+			return bebe;
+		}			
+	}
+	
+	return bebe;
 }
 
 
 int __port_rtu_get_divid_ask(struct port_cmd_rtu *arg)
 {	
-	arg->sub.get_divid_cup.place = 1;
 	rtu_jiutou_dat_get(1, 0x13, &arg->sub.get_divid_cup.bebe);
 	if (arg->sub.get_divid_cup.bebe > 0) { //酒头按钮按下
 		arg->sub.get_divid_cup.cmd_time++;
@@ -239,17 +300,18 @@ int __port_rtu_get_divid_ask(struct port_cmd_rtu *arg)
 		if (arg->sub.get_divid_cup.cmd_time > 10) { 
 			 arg->sub.get_divid_cup.cmd_time = 0;
 			 arg->sub.get_divid_cup.enable = 1;
+			 arg->sub.get_divid_cup.place = 1;
 			 return 0;
 		}
 	}
 	
-	arg->sub.get_divid_cup.place = 2;
 	rtu_jiutou_dat_get(2, 0x13, &arg->sub.get_divid_cup.bebe);
 	if (arg->sub.get_divid_cup.bebe > 0) {
 		arg->sub.get_divid_cup.cmd_time++;
 		if (arg->sub.get_divid_cup.cmd_time > 10) {
 			 arg->sub.get_divid_cup.cmd_time = 0;
 			 arg->sub.get_divid_cup.enable = 1;
+			 arg->sub.get_divid_cup.place = 2;
 			 return 0;
 		}
 	}
@@ -277,6 +339,18 @@ int __port_rtu_ctl_press_switch_on(struct port_cmd_rtu *arg)
 	return 0;
 }
 
+int __port_rtu_ctl_press_switch_off(struct port_cmd_rtu *arg)
+{
+	//05
+	//01
+    	//关闭压力调节器气体总阀
+    	//0A 05 00 01 00 00
+	rtu_tiaoya_ctl_set(0x0A, 0x0001,0x0000);	
+	
+	return 0;
+}
+
+
 int __port_rtu_get_press_val(struct port_cmd_rtu *arg)
 {
 	//0A 03 00 00 00 0x
@@ -286,11 +360,18 @@ int __port_rtu_get_press_val(struct port_cmd_rtu *arg)
 
 
 int __port_rtu_get_divid_cap_switch_on(struct port_cmd_rtu *arg)
-{
-	
+{	
 	//出酒指令
-    //01/02 05 00 0A FF 00
-    rtu_jiutou_ctl_set(2, 0x000A, 0xff00);
+    	//01/02 05 00 0A FF 00
+  
+  	//发出酒目标量
+    	rtu_jiutou_arg_set(arg->sub.divid_cap.place, 0x0008, arg->sub.divid_cap.bebe_ml);
+	
+	vTaskDelay(500);
+	
+	//发出酒指令
+    	rtu_jiutou_ctl_set(arg->sub.divid_cap.place, 0x000A, 0xff00);
+	
 	return 0;
 }
 
@@ -299,7 +380,8 @@ int __port_rtu_get_divid_cap_process(struct port_cmd_rtu *arg)
 {
 	 //0F：出酒倒计时高字节
          // 10：出酒倒计时低字节
-
+    	rtu_jiutou_dat_get(arg->sub.divid_cap_pro.place, 0x0014, &arg->sub.divid_cap_pro.bebe);
+	
 	return 0;
 }
 
@@ -307,8 +389,55 @@ int __port_rtu_get_divid_cap_process(struct port_cmd_rtu *arg)
 int __port_rtu_get_divid_cap_switch_off(struct port_cmd_rtu *arg)
 {
 	// not use
+	
 	return 0;
 }
+
+
+
+int __port_rtu_jiutou_gas_switch_on(struct port_cmd_rtu *arg)
+{
+	rtu_jiutou_ctl_set(arg->sub.jiutou.place, 0x0005,0xFF00);	
+	return 0;
+}
+
+
+int __port_rtu_jiutou_gas_switch_off(struct port_cmd_rtu *arg)
+{
+	rtu_jiutou_ctl_set(arg->sub.jiutou.place, 0x0005,0x0000);	
+	return 0;
+}
+
+
+int __port_rtu_jiutou_bebe_valve_on(struct port_cmd_rtu *arg)
+{
+	rtu_jiutou_ctl_set(arg->sub.jiutou.place, 0x0006, 0xFF00);	
+	return 0;
+}
+
+
+int __port_rtu_jiutou_bebe_valve_off(struct port_cmd_rtu *arg)
+{
+	rtu_jiutou_ctl_set(arg->sub.jiutou.place, 0x0006, 0x0000);	
+	return 0;
+}
+
+
+int __port_rtu_tiaoya_pump_valve_on(struct port_cmd_rtu *arg)
+{
+	rtu_tiaoya_ctl_set(0x0A, 0x0004,0xFF00);	
+	return 0;
+}
+
+
+int __port_rtu_tiaoya_pump_valve_off(struct port_cmd_rtu *arg)
+{
+	rtu_tiaoya_ctl_set(0x0A, 0x0004,0x0000);	
+	return 0;
+}
+
+
+
 
 
 int  divid_cup_port_rtu(struct port_cmd_rtu *arg)
@@ -327,6 +456,10 @@ int  divid_cup_port_rtu(struct port_cmd_rtu *arg)
 	case RTU_CTL_PRESS_SWITCH_ON:
 		ret = __port_rtu_ctl_press_switch_on(arg);
 		break;
+	
+	case RTU_CTL_PRESS_SWITCH_OFF:
+		ret = __port_rtu_ctl_press_switch_off(arg);
+		break;		
 		
 	case RTU_GET_PRESS_VAL:
 		ret = __port_rtu_get_press_val(arg);
@@ -344,13 +477,29 @@ int  divid_cup_port_rtu(struct port_cmd_rtu *arg)
 		ret = __port_rtu_get_divid_cap_switch_off(arg);
 		break;
 	
-	case RTU_SET_PRESS_CTL_MAIN_GAS_VALVE_ON:
-		ret = __port_rtu_get_divid_cap_switch_off(arg);
-		break;	
+	case RTU_JIUTOU_GAS_SWITCH_ON: //洒头气阀打开
+		ret = __port_rtu_jiutou_gas_switch_on(arg);
+		break;
 	
-	case RTU_SET_PRESS_CTL_MAIN_GAS_VALVE_OFF:
-		ret = __port_rtu_get_divid_cap_switch_off(arg);
+	case RTU_JIUTOU_GAS_SWITCH_OFF: //洒头气阀关闭
+		ret = __port_rtu_jiutou_gas_switch_off(arg);
+		break;
+
+	case RTU_JIUTOU_BEBE_VALVE_ON: //洒阀打开
+		ret = __port_rtu_jiutou_bebe_valve_on(arg);
+		break;
+		
+	case RTU_JIUTOU_BEBE_VALVE_OFF: //洒阀关闭
+		ret = __port_rtu_jiutou_bebe_valve_off(arg);
 		break;	
+
+	case RTU_TIAOYA_PUMP_VALVE_ON:
+		ret = __port_rtu_tiaoya_pump_valve_on(arg);
+		break;			
+
+	case RTU_TIAOYA_PUMP_VALVE_OFF:
+		ret = __port_rtu_tiaoya_pump_valve_off(arg);
+		break;			
 		
 	default:
 		break;
@@ -370,11 +519,14 @@ int __port_lcd_clear_bottle_ask(struct port_cmd_lcd *arg)
     }
     else
     {
-      ret = g_wash_num;
-      g_wash_num = 0;
+	    if (g_wash_num > 0) {	    
+	    	arg->sub.clear_bottle.place = g_wash_num;
+	    	arg->sub.clear_bottle.enable = 1;
+		g_wash_num = 0;
+	    }
     }
     
-	return ret;
+	return 0;
 }
 
 
@@ -388,36 +540,47 @@ int __port_lcd_install_bottle_ask(struct port_cmd_lcd *arg)
     }
     else
     {
-      ret = g_bottling_num;
-      g_bottling_num = 0;
+	    if (g_bottling_num > 0) {
+	    	arg->sub.install_bottle.place = g_bottling_num;//装瓶酒位
+      		arg->sub.install_bottle.pump = 1;
+      		g_bottling_num = 0;
+	    }
     }
     
-	return ret;
+	return 0;
 }
 
 int __port_lcd_show_alarm_author_limit(struct port_cmd_lcd *arg)
 {
-	return 0;
+	return set_author_limit();
 }
 
 
 int __port_lcd_show_bebe(struct port_cmd_lcd *arg)
 {
-	return 0;
+	return jump_pour_page();
 }
 
 
 int __port_lcd_show_alarm_under_capacity(struct port_cmd_lcd *arg)
 {
-	return 0;
+	
 }
 
 
 
 int __port_lcd_show_alarm_press_unusual(struct port_cmd_lcd *arg)
 {
-	return 0;
+	return jump_page_lackpressure();
 }
+
+
+int  __port_lcd_get_author(struct port_cmd_lcd *arg)
+{
+    lcd_author_judge(&arg->sub.author_limit);
+    return 0;
+}
+
 
 
 int  divid_cup_port_lcd(struct port_cmd_lcd *arg)
@@ -499,44 +662,77 @@ int divid_cup_install_bottle_inflat(char place)
 	unsigned short arg_press_max_val;
 	unsigned short arg_press_min_val;		
 	
-	arg.cmd = RTU_SET_PRESS_CTL_MAIN_GAS_VALVE_ON;
+	/* 酒阀关闭 */
+	arg.cmd = RTU_JIUTOU_BEBE_VALVE_OFF;
+	arg.sub.jiutou.place = place;
 	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
 	if (ret < 0) {
-		print("rtu_set_press_ctl_main_gas_valve_on, error[%d]\r\n", 
-			ret);
+		print("rtu_set_divid_cap_bebe_valve_off, error[%d]\r\n", ret);
+		return -1;
+	}
+	
+	vTaskDelay(5000);
+	
+	/* 酒头的气阀打开 */
+	arg.cmd = RTU_JIUTOU_GAS_SWITCH_ON;
+	arg.sub.jiutou.place = place;
+	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
+	if (ret < 0) {
+		print("rtu_set_divid_cap_air_switch_off, error[%d]\r\n", ret);
 		return -1;
 	}	
 	
-	ret = divid_cup_get_press_val_arg(&arg_press_max_val, &arg_press_min_val);
+	vTaskDelay(5000);
+	
+	/* 打开总气阀开关 */	
+	arg.cmd = RTU_CTL_PRESS_SWITCH_ON;
+	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
 	if (ret < 0) {
-		print("divid_cup_get_press_val_arg error[%d]\r\n", ret);
+		print("rtu_set_press_ctl_main_gas_valve_off, error[%d]\r\n", 
+			ret);
 		return -1;
-	}		
-				
-	while (ovt_sec--) {
-		char last_press_val = 255;
-		char press_val;
-		
-		arg.cmd = RTU_GET_PRESS_VAL;
-		ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
-		if (ret < 0) {
-			print("rtu_ctl_press_switch_on, error[%d]\r\n", ret);
-			return -1;
-		}			
-		
-		press_val = arg.sub.press_val;
-		if ((press_val > arg_press_min_val) 
-			&& (press_val < arg_press_max_val)) {
-			return -1;		
-		}		
-		
-		if (press_val == last_press_val)
-			break;
-		
-		last_press_val = press_val;
 	}
 	
-	arg.cmd = RTU_SET_PRESS_CTL_MAIN_GAS_VALVE_OFF;
+	vTaskDelay(5000);
+	
+//	/* 获取压力定值 */
+//	ret = divid_cup_get_press_val_arg(&arg_press_max_val, &arg_press_min_val);
+//	if (ret < 0) {
+//		print("divid_cup_get_press_val_arg error[%d]\r\n", ret);
+//		return -1;
+//	}		
+//	
+//	/* 注入氮气，最多注入ovt_sec就要主动关闭 */	
+//	while (ovt_sec--) {
+//		char last_press_val = 255;
+//		char press_val;
+//		
+//		/* 实时获取当前的压力值 */
+//		arg.cmd = RTU_GET_PRESS_VAL;
+//		ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
+//		if (ret < 0) {
+//			print("rtu_ctl_press_switch_on, error[%d]\r\n", ret);
+//			return -1;
+//		}			
+//		
+//		/* 压力值异常 */
+//		press_val = arg.sub.press_val;
+//		if ((press_val > arg_press_min_val) 
+//			&& (press_val < arg_press_max_val)) {
+//			return -1;		
+//		}		
+//		
+//		/* 压力值不再变化，说明氮气已经填满酒瓶，注入完成了 */
+//		if (press_val == last_press_val)
+//			break;
+//		
+//		last_press_val = press_val;
+//
+//		vTaskDelay(1000);
+//	}
+	
+	/* 关闭总的气阀 */	
+	arg.cmd = RTU_CTL_PRESS_SWITCH_OFF;
 	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
 	if (ret < 0) {
 		print("rtu_set_press_ctl_main_gas_valve_off, error[%d]\r\n", 
@@ -544,7 +740,18 @@ int divid_cup_install_bottle_inflat(char place)
 		return -1;
 	}
 
+	vTaskDelay(5000);
 	
+	/* 酒头的气阀关闭 */
+	arg.cmd = RTU_JIUTOU_GAS_SWITCH_OFF;
+	arg.sub.jiutou.place = place;
+	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
+	if (ret < 0) {
+		print("rtu_set_divid_cap_air_switch_off, error[%d]\r\n", ret);
+		return -1;
+	}
+	
+	vTaskDelay(5000);
 	
 	return 0;		
 }
@@ -555,37 +762,65 @@ int divid_cup_install_bottle_pump(char place)
 {
 	int ret;
 	struct port_cmd_rtu arg;
-		
-	arg.cmd = RTU_SET_PRESS_CTL_MAIN_GAS_VALVE_OFF;
+	
+	/* 关闭总的气阀 */	
+	arg.cmd = RTU_CTL_PRESS_SWITCH_OFF;
 	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
 	if (ret < 0) {
 		print("rtu_set_press_ctl_main_gas_valve_off, error[%d]\r\n", 
 			ret);
 		return -1;
 	}
-
-	arg.cmd = RTU_SET_DIVID_CAP_GAS_VALVE_ON;
-	arg.sub.divid_cap_gas_valve.place = place;
+	
+	vTaskDelay(5000);
+	
+	/* 酒头的气阀打开 */
+	arg.cmd = RTU_JIUTOU_GAS_SWITCH_ON;
+	arg.sub.jiutou.place = place;
+	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
 	if (ret < 0) {
 		print("rtu_set_divid_cap_air_switch_off, error[%d]\r\n", ret);
 		return -1;
 	}	
 	
-	arg.cmd = RTU_SET_DIVID_CAP_BEBE_VALVE_OFF;
-	arg.sub.divid_cap_bebe_valve.place = place;
+	vTaskDelay(5000);
+	
+	/* 酒阀关闭 */
+	arg.cmd = RTU_JIUTOU_BEBE_VALVE_OFF;
+	arg.sub.jiutou.place = place;
+	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
 	if (ret < 0) {
 		print("rtu_set_divid_cap_bebe_valve_off, error[%d]\r\n", ret);
 		return -1;
 	}	
 	
-	arg.cmd = RTU_SET_PRESS_CTL_PUMP_GAS;
+	vTaskDelay(5000);
+	
+	/* 向压力控制器发出真空电磁阀打开 */
+	arg.cmd = RTU_TIAOYA_PUMP_VALVE_ON;
+	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
 	if (ret < 0) {
 		print("rtu_set_press_ctl_pump_gas, error[%d]\r\n", ret);
 		return -1;
 	}	
 	
-	arg.cmd = RTU_SET_DIVID_CAP_GAS_VALVE_OFF;
-	arg.sub.divid_cap_gas_valve.place = place;
+	/* 抽真空执行一定时间 */
+	vTaskDelay(5000);
+	
+	/* 向压力控制器发出真空电磁阀关闭 */
+	arg.cmd = RTU_TIAOYA_PUMP_VALVE_OFF;
+	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
+	if (ret < 0) {
+		print("rtu_set_press_ctl_pump_gas, error[%d]\r\n", ret);
+		return -1;
+	}	
+	
+	vTaskDelay(5000);
+	
+	/* 酒头的气阀关闭*/
+	arg.cmd = RTU_JIUTOU_GAS_SWITCH_OFF;
+	arg.sub.jiutou.place = place;
+	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
 	if (ret < 0) {
 		print("rtu_set_divid_cap_air_switch_off, error[%d]\r\n", ret);
 		return -1;
@@ -595,16 +830,24 @@ int divid_cup_install_bottle_pump(char place)
 }
 
 
+/* 根据酒头出酒指令，大杯，中杯，小杯，来确定实际的出酒量 */
 int get_bebe_val(unsigned short *bebe, char place, char bebe_cmd)
 {
 	int len;
 	int ret;
 	
+	//洗瓶命令
+	if ((place == 0) && (bebe_cmd = 4))
+		*bebe = 200;
+
+	/* 1号酒头 */
 	if (place == 1) {
-		if (bebe_cmd == 1) {	
+		/* 小杯酒 */
+		if (bebe_cmd == 1) {
+			/* 取出小杯酒的容量 */	
 			len = store_param_read("bebe1_1", (char *)bebe);
 			if (len == 0) {
-				*bebe = 10;
+				*bebe = 75;
 				ret = store_param_save("bebe1_1", (char *)bebe, 2);
 				if (ret < 0)
 					return -1;
@@ -612,56 +855,66 @@ int get_bebe_val(unsigned short *bebe, char place, char bebe_cmd)
 				return 0;
 			}
 		}
-		
-		if (bebe_cmd == 2) {	
+		/* 中杯酒 */
+		if (bebe_cmd == 2) {
+			/* 取出中杯酒的容量 */
 			len = store_param_read("bebe1_2", (char *)bebe);
 			if (len == 0) {
-				*bebe = 20;
+				*bebe = 100;
 				ret = store_param_save("bebe1_2", (char *)bebe, 2);
 				if (ret < 0)
 					return -1;
 			}
 		}
-		
-		if (bebe_cmd == 3) {	
+		/* 大杯酒 */
+		if (bebe_cmd == 3) {
+			/* 取出大杯酒的容量 */	
 			len = store_param_read("bebe1_3", (char *)bebe);
 			if (len == 0) {
-				*bebe = 30;
+				*bebe = 150;
 				ret = store_param_save("bebe1_3", (char *)bebe, 2);
 				if (ret < 0)
 					return -1;
+
+				return 0;
 			}
 		}	
 	}
 	
+	/* 2号酒头 */
 	if (place == 2) {
 		if (bebe_cmd == 1) {	
 			len = store_param_read("bebe2_1", (char *)bebe);
+			*bebe = 75;
 			if (len == 0) {
-				*bebe = 10;
+				*bebe = 75;
 				ret = store_param_save("bebe2_1", (char *)bebe, 2);
 				if (ret < 0)
 					return -1;
+				return 0;
 			}
 		}
 		
 		if (bebe_cmd == 2) {	
 			len = store_param_read("bebe2_2", (char *)bebe);
 			if (len == 0) {
-				*bebe = 20;
+				*bebe = 100;
 				ret = store_param_save("bebe2_2", (char *)bebe, 2);
 				if (ret < 0)
 					return -1;
+
+				return 0;
 			}
 		}
 		
 		if (bebe_cmd == 3) {	
 			len = store_param_read("bebe2_3", (char *)bebe);
 			if (len == 0) {
-				*bebe = 30;
+				*bebe = 150;
 				ret = store_param_save("bebe2_3", (char *)bebe, 2);
 				if (ret < 0)
 					return -1;
+				return 0;
 			}
 		}	
 	}
@@ -674,10 +927,9 @@ int get_bebe_val(unsigned short *bebe, char place, char bebe_cmd)
 
 static int divid_cup_cmd_check(unsigned short *bebe, char *place)
 {
-	struct port_cmd_rtu arg;
-	struct port_cmd_lcd lcd_arg;
+	struct port_cmd_rtu arg; /* 出酒模块与RTU数据交互结构 */
+	struct port_cmd_lcd lcd_arg; /* 出酒模块与LCD数据交互结构 */
         int ret;
-	char divid_up_cmd_time = 0;
 	
 	while (1) {
 		
@@ -690,43 +942,64 @@ static int divid_cup_cmd_check(unsigned short *bebe, char *place)
 		}		
 		
 		/* 出酒命令有效 */
-		if (arg.sub.get_divid_cup.enable) { 
+		if (arg.sub.get_divid_cup.enable == 1) { 
 			arg.sub.get_divid_cup.enable = 0;
 			
-			/* 清除出酒指令 */
-			arg.cmd = RTU_CLEAR_DIVID_ASK;
+                    	/* 获取到有效的出酒指令后，需要清除RTU出酒指令 */
+                    	arg.cmd = RTU_CLEAR_DIVID_ASK;
                 	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
                 	if (ret < 0) {
                     		print("rtu_clear_divid_ask, error[%d]\r\n", ret);
                     		return -1;
                 	}
-				
-			/* 计算出实际的出酒值 */
-			get_bebe_val(bebe, arg.sub.get_divid_cup.place, arg.sub.get_divid_cup.bebe);
-			return 1;			
+			
+			*place = arg.sub.get_divid_cup.place;
+			*bebe = arg.sub.get_divid_cup.bebe;
+			
+			//模拟洗瓶
+			//lcd_arg.sub.clear_bottle.enable = 1;
+			
+			//模拟装瓶
+			//lcd_arg.sub.install_bottle.pump = 1;
+			//lcd_arg.sub.install_bottle.place = 2;
+			
+			return 1; /* 出酒 */			
 		} 
 		
 				
-		/*  clear bottle ask from LCD  */
-		arg.cmd = LCD_CLEAR_BOTTLE_ASK;
+		/* 从LCD获取到洗甁指令
+		 * 洗瓶的过程跟出酒相似，只是出的水多
+		 * 洗完瓶后应该立刻关闭气阀，而出完酒后不需要立即关气阀，
+		 * 应该等气体充满到酒瓶
+		 * 才关气阀
+		 * */
+		lcd_arg.cmd = LCD_CLEAR_BOTTLE_ASK;
+		ret = divid_cup_port(PORT_CMD_LCD, (unsigned long)&lcd_arg);
+		if (ret < 0) {
+			print("divid_cup_port, error[%d]\r\n", ret);
+			return -1;
+		}
+		
+		if (lcd_arg.sub.clear_bottle.enable == 1) {
+			lcd_arg.sub.clear_bottle.enable = 0;
+			*bebe = 4;
+			*place = lcd_arg.sub.clear_bottle.place;
+			return 2; /* 洗瓶 */	
+		}
+
+
+		/*  从LCD界面获取装瓶指令  */
+		lcd_arg.cmd = LCD_INSTALL_BOTTLE_ASK;	
 		ret = divid_cup_port(PORT_CMD_LCD, (unsigned long)&lcd_arg);
 		if (ret < 0) {
 			print("divid_cup_port, error[%d]\r\n", ret);
 			return -1;
 		}		
-		if (lcd_arg.sub.clear_bottle.enable)
-			//break;	
 		
-		/*  install bottle ask from LCD  */
-		arg.cmd = LCD_INSTALL_BOTTLE_ASK;
-		ret = divid_cup_port(PORT_CMD_LCD, (unsigned long)&lcd_arg);
-		if (ret < 0) {
-			print("divid_cup_port, error[%d]\r\n", ret);
-			return -1;
-		}		
-		
-		/* pump air from bottle */
-		if (lcd_arg.sub.install_bottle.pump) {
+		/* 抽真空处理，把酒瓶里面的空气抽出去 */
+		if (lcd_arg.sub.install_bottle.pump == 1) {
+			
+			/* 抽真空处理 */
 			ret = divid_cup_install_bottle_pump(
 				lcd_arg.sub.install_bottle.place);
 			if (ret < 0) {
@@ -736,31 +1009,34 @@ static int divid_cup_cmd_check(unsigned short *bebe, char *place)
 			}			
 		}
 
-		/* inflat nitrogen to bottle */
-		if (lcd_arg.sub.install_bottle.pump) {
+		/* 抽完真空后注入氮气到洒瓶 */
+		if (lcd_arg.sub.install_bottle.pump == 1) {
+
+			lcd_arg.sub.install_bottle.pump = 0;
+			/* 注入氮气过程处理 */
 			ret = divid_cup_install_bottle_inflat(
 				lcd_arg.sub.install_bottle.place);
 			if (ret < 0) {
 				print("divid_cup_install_bottle_inflat,\
 					error[%d]\r\n",
 					ret);
-				//return -1;
+				return -1;
 			}			
 		}	
 		
 		vTaskDelay(100);
 	}
-	
-	return 0;
 }
 
 
+/* 出酒条件与权限判断 */
 static int divid_cup_judge(unsigned short bebe, char place)
 {
 	struct port_cmd_lcd arg;
-	int total_capacity;
+	unsigned short bebe_ml;
 	int ret;
 	
+	/* 查询LCD的状态，如果LCD已经进入了出酒的待机界面则可以出酒 */
 	arg.cmd = LCD_GET_AUTHOR;
 	ret = divid_cup_port(PORT_CMD_LCD, (unsigned long)&arg);
 	if (ret < 0) {
@@ -768,7 +1044,8 @@ static int divid_cup_judge(unsigned short bebe, char place)
 		return -1;
 	}
 	
-	if (arg.sub.author_limit) {		
+	/* 如果LCD界面不允许出酒，调出权限不足的界面 */
+	if (!arg.sub.author_limit) {		
 		
 		arg.cmd = LCD_SHOW_ALARM_AUTHOR_LIMIT;
 		ret = divid_cup_port(PORT_CMD_LCD, (unsigned long)&arg);
@@ -781,32 +1058,49 @@ static int divid_cup_judge(unsigned short bebe, char place)
 		return -1;	
 	}
 	
-	arg.cmd = LCD_SHOW_BEBE;
-	arg.sub.show_bebe.bebe = bebe;
-	arg.sub.show_bebe.place = place;
+	//当前是洗瓶命令
+	if ((bebe == 4) && (place == 0))
+		return 0;
 	
-	ret = divid_cup_port(PORT_CMD_LCD, (unsigned long)&arg);
-	if (ret < 0) {
-		print("divid_cup_port PORT_CMD_LCD error[%d]\r\n", ret);
-		return -1;
-	}	
-		
-	total_capacity = divid_cup_get_bebe_capacity(place);
-	if (total_capacity < 0) {
-		print("divid_cup_get_bebe_capacity error[%d]\r\n", total_capacity);
+			
+	/* 获取当新酒头位置总酒量 */
+	divid_cup_info.total_capacity = divid_cup_get_bebe_capacity(place);
+	if (divid_cup_info.total_capacity < 0) {
+		print("divid_cup_get_bebe_capacity error[%d]\r\n", divid_cup_info.total_capacity);
 		return -1;
 	}		
 	
-	if (bebe < total_capacity) {
+	get_bebe_val(&bebe_ml, place, bebe);
+	
+	//出酒界面信息
+	if (bebe_ml > divid_cup_info.total_capacity) 	
+		divid_cup_info.yujiubuzu_flag = 1;
+	else
+	  	divid_cup_info.yujiubuzu_flag = 0;
+	
+	//memset(divid_cup_info.bebe_ml, 0, 16);
+	sprintf(divid_cup_info.bebe_ml, "%d", divid_cup_info.total_capacity);
+
+	divid_cup_info.bebe = bebe;
+	strcpy(divid_cup_info.huohao, "123456");
+	strcpy(divid_cup_info.jiage_1, "18.8");
+	strcpy(divid_cup_info.jiage_2, "18.8");
+	strcpy(divid_cup_info.jiage_3, "18.8");
+	divid_cup_info.place = place;
 		
-		arg.cmd = LCD_SHOW_ALARM_UNDER_CAPACITY;
-		ret = divid_cup_port(PORT_CMD_LCD, (unsigned long)&arg);
-		if (ret < 0) {
-			print("LCD_SHOW_ALARM_UNDER_CAPACITY error[%d]\r\n", ret);
-			return -1;
-		}		
+        /* 通知LCD进入酒量显示界面 */
+        arg.cmd = LCD_SHOW_BEBE;
+        arg.sub.show_bebe.bebe = bebe;
+        arg.sub.show_bebe.place = place;	
+        ret = divid_cup_port(PORT_CMD_LCD, (unsigned long)&arg);
+        if (ret < 0) {
+            print("divid_cup_port PORT_CMD_LCD error[%d]\r\n", ret);
+            return -1;
+        }		
 		
-		print("divid_cup_judge under capacity!\r\n");
+	/* 当前需要出酒量大于总的洒量时 */
+	if (divid_cup_info.yujiubuzu_flag == 1) {	
+
 		return -1;		
 	}	
 	
@@ -823,7 +1117,9 @@ static int divid_cup(unsigned short bebe, char place)
 	unsigned short arg_press_min_val;
 	unsigned short press_val = 0;
 	int ret;
-		
+	unsigned short bebe_ml = 0;
+	
+	/* 打开压力调节器开关 */	
 	arg.cmd = RTU_CTL_PRESS_SWITCH_ON;
 	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
 	if (ret < 0) {
@@ -847,6 +1143,7 @@ static int divid_cup(unsigned short bebe, char place)
 			return -1;
 		}			
 		
+		/* 当压力值在正常范围内才可以正常出酒 */
 		press_val = arg.sub.press_val;
 		if ((press_val > arg_press_min_val) 
 			&& (press_val < arg_press_max_val)) {
@@ -856,7 +1153,7 @@ static int divid_cup(unsigned short bebe, char place)
 		vTaskDelay(100);
 	}
 	
-	
+	/* 压力异常，通知LCD显示压力异常界面 */
 	if ((press_val <= arg_press_min_val) 
 			|| (press_val >= arg_press_max_val)) {
 
@@ -868,14 +1165,19 @@ static int divid_cup(unsigned short bebe, char place)
 		}		
 		
 		print("divid_cup_judge press_unusual!\r\n");
-		//return -1;		
+		return -1;		
 	}
+	
+	/* 计算出实际的出酒值 */
+	get_bebe_val(&bebe_ml, place, bebe); 
+	
+	divid_cup_info.bebe_mubiao = bebe_ml;
 	
 	/* 向酒头发送出酒指令 */		
 	arg.cmd = RTU_GET_DIVID_CAP_SWITCH_ON;
 	arg.sub.divid_cap.bebe = bebe;
 	arg.sub.divid_cap.place = place;
-	arg.sub.divid_cap.press_val = press_val;
+	arg.sub.divid_cap.bebe_ml = bebe_ml;
 	ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
 	if (ret < 0) {
 		print("rtu_get_divid_cap_switch_on, error[%d]\r\n", ret);
@@ -886,32 +1188,36 @@ static int divid_cup(unsigned short bebe, char place)
 }
 
 
+/* 出酒结束处理 */
 static int divid_cup_end(char bebe, char place)
 {
 	struct port_cmd_rtu arg;
+    	struct port_cmd_lcd lcd_arg;
 	unsigned long ovt_100ms = 100;
 	char divid_cup_res = 0;
 	unsigned short arg_press_max_val;
 	unsigned short arg_press_min_val;
 	unsigned short press_val = 0;
-	int ret;	
+	int ret;
+	unsigned short total_capacity = 0;
 	
+	/* 获取压力上下限定值 */
 	ret = divid_cup_get_press_val_arg(&arg_press_max_val, &arg_press_min_val);
 	if (ret < 0) {
 		print("divid_cup_get_press_val_arg error[%d]\r\n", ret);
 		return -1;
 	}	
 	
-	/* 提示LCD进入显示酒量界面 */
-	arg.cmd = LCD_SHOW_GOTO_BEBE_SHOW;
-	ret = divid_cup_port(PORT_CMD_LCD, (unsigned long)&arg);
-	if (ret < 0) {
-		return -1;
-	}		
-	
-	
-	while (ovt_100ms--) {
+//	/* 提示LCD进入显示酒量界面 */
+//	arg.cmd = LCD_SHOW_GOTO_BEBE_SHOW;
+//	ret = divid_cup_port(PORT_CMD_LCD, (unsigned long)&arg);
+//	if (ret < 0) {
+//		return -1;
+//	}		
+			
+	while (1) {
 		
+		/* 实时获取当前压力值 */
 		arg.cmd = RTU_GET_PRESS_VAL;
 		ret = divid_cup_port(PORT_CMD_RTU, (unsigned long)&arg);
 		if (ret < 0) {
@@ -919,21 +1225,14 @@ static int divid_cup_end(char bebe, char place)
 			return -1;
 		}			
 		
+		/* 出酒过程中出现了压力异常 */
 		press_val = arg.sub.press_val;
-		if ((press_val > arg_press_min_val) 
-			&& (press_val < arg_press_max_val)) {
-			divid_cup_res = -1;
+		if ((press_val < arg_press_min_val) 
+			|| (press_val > arg_press_max_val)) {
+			divid_cup_res = 2; /* 压力异常 */
 			break;		
 		}		
-		
-		
-		/* 提示LCD刷新显示酒量界面 */
-		arg.cmd = LCD_SHOW_REFRESH_BEBE;
-		ret = divid_cup_port(PORT_CMD_LCD, (unsigned long)&arg);
-		if (ret < 0) {
-			return -1;
-		}		
-			
+				         
 		/* 从酒头获取出酒量 */
 		arg.cmd = RTU_GET_DIVID_CAP_PROCESS;		
 		arg.sub.divid_cap_pro.place = place;
@@ -944,17 +1243,21 @@ static int divid_cup_end(char bebe, char place)
 		if (ret < 0) {
 			print("rtu_get_divid_cap_switch_on, error[%d]\r\n", ret);
 			return -1;
+		}		
+		
+		if (arg.sub.divid_cap_pro.bebe > 0) {		
+			total_capacity = 
+				divid_cup_info.total_capacity - arg.sub.divid_cap_pro.bebe;
+		
+			//memset(divid_cup_info.bebe_ml, 0, 16);
+			sprintf(divid_cup_info.bebe_ml, "%d", total_capacity);				
+			
+			if (divid_cup_info.bebe_mubiao == arg.sub.divid_cap_pro.bebe) {
+				divid_cup_res = 1;			
+				break;
+			}
 		}
 		
-		if (arg.sub.divid_cap_pro.res == 1) {
-			divid_cup_res = 1;
-			break;
-		}
-		
-		if (arg.sub.divid_cap_pro.bebe >= bebe) {
-			divid_cup_res = 2;
-			break;		
-		}
 		
 		vTaskDelay(100);
 	}
@@ -967,9 +1270,10 @@ static int divid_cup_end(char bebe, char place)
 		return -1;
 	}	
 	
-	if (divid_cup_res == 1) {
+	/* 通知LCD显示压力异常界面 */
+	if (divid_cup_res == 2) {
 		arg.cmd = LCD_SHOW_ALARM_PRESS_UNUSUAL;
-		ret = divid_cup_port(PORT_CMD_LCD, (unsigned long)&arg);
+		ret = divid_cup_port(PORT_CMD_LCD, (unsigned long)&lcd_arg);
 		if (ret < 0) {
 			print("lcd_show_alarm_press_unusual error[%d]\r\n", ret);
 			return -1;
@@ -991,27 +1295,31 @@ static int divid_cup_end(char bebe, char place)
 int divid_cup_ctrl(void)
 {
 	int ret;
-	unsigned short bebe;
-	char place;
+	unsigned short bebe; /* 出酒量 ml */
+	char place; /* 出酒位置，哪个酒头需要出酒 */
 	
+	/* 从酒头获取出酒指令 */
 	ret = divid_cup_cmd_check(&bebe, &place);
 	if (ret < 0) {
 		print("divid_cup_cmd_check error[%d]\r\n", ret);
 		return -1;
 	} 	
 
+	/* 判断是否符合出酒条件 */
 	ret = divid_cup_judge(bebe, place);
 	if (ret < 0) {
 		print("divid_cup_judge error[%d]\r\n", ret);
 		return -1;
 	}
 	
+	/* 执行出酒命令 */
 	ret = divid_cup(bebe, place);
 	if (ret < 0) {
 		print("divid_cup error[%d]\r\n", ret);
 		return -1;
 	}
-
+	
+	/* 检测出酒是否完成 */
 	ret = divid_cup_end(bebe, place);
 	if (ret < 0) {
 		print("divid_cup error[%d]\r\n", ret);

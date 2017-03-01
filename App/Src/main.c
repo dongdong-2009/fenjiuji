@@ -84,10 +84,10 @@ int main(void)
 	xTaskCreate(task_wifi, "wifi", configMINIMAL_STACK_SIZE, NULL, 3, NULL);
 
 	/* 创建rtu任务 */
-	//xTaskCreate(task_rtu, "rtu", configMINIMAL_STACK_SIZE, NULL, 4, NULL);
+	xTaskCreate(task_rtu, "rtu", configMINIMAL_STACK_SIZE, NULL, 4, NULL);
 
 	/* 创建lcd任务 */
-	//xTaskCreate(task_lcd, "lcd", configMINIMAL_STACK_SIZE, NULL, 4, NULL);
+	xTaskCreate(task_lcd, "lcd", configMINIMAL_STACK_SIZE, NULL, 4, NULL);
 
 	/* 创建升级任务 */
 	xTaskCreate(task_upgrade, "upgrade", configMINIMAL_STACK_SIZE, NULL, 4, NULL);
@@ -96,13 +96,13 @@ int main(void)
 	//xTaskCreate(task_shell, "shell", configMINIMAL_STACK_SIZE, NULL, 6, NULL);
 
 	/* 创建divid_cup任务 */
-	//xTaskCreate(task_divid_cup, "divid_cap", configMINIMAL_STACK_SIZE, NULL, 6, NULL);
+	xTaskCreate(task_divid_cup, "divid_cap", configMINIMAL_STACK_SIZE, NULL, 6, NULL);
 
 	/* 创建temp ctrl 任务 */
 	//xTaskCreate(task_temp_ctrl, "temp_ctrl", configMINIMAL_STACK_SIZE, NULL, 6, NULL);
 
 	/* 创建daemon 任务 */
-	//xTaskCreate(task_daemon, "task_daemon", configMINIMAL_STACK_SIZE, NULL, 7, NULL);
+	xTaskCreate(task_daemon, "task_daemon", configMINIMAL_STACK_SIZE, NULL, 7, NULL);
 	
 	/* 任务调度 */
 	vTaskStartScheduler();

@@ -17,6 +17,7 @@
 #include "stdio.h"
 #include "rtc.h"
 #include "task_lcd.h"
+#include "divid_cup.h"
 
 #define LCD_RX_BUFF_SIZE 128
 #define LCD_TX_BUFF_SIZE 64
@@ -123,6 +124,7 @@ static struct Frame_str frame;
 
 int g_wash_num = 0;                 //洗瓶编号
 int g_bottling_num = 0;             //装瓶编号
+int c_bAuthorityAlarm = 0;          //权限警告
 
 //模拟数据
 const char *password1 ="111111";    //开机密码
@@ -153,8 +155,6 @@ char luminance = 60;                                    //灯光亮度
 char color = 3;                                         //灯光颜色
 char change_bottle;                                     //更新的瓶位
 
-
-
 /******************************************************************************
     功能说明：无
     输入参数：无
@@ -170,6 +170,126 @@ static void at_cmd(char *pCmd)
     lcd.txbuf[lcd.txlen++] = 0xFF;
     lcd.txbuf[lcd.txlen++] = 0;
     lcd_send(lcd.txbuf);
+}
+
+/******************************************************************************
+    功能说明：无
+    输入参数：无
+    输出参数：无
+    返 回 值：无
+*******************************************************************************/
+int lcd_author_judge(unsigned char *author)
+{
+  if((page_startup == lcd.page_present)||
+     (page_code1 == lcd.page_present)||
+     (page_lock == lcd.page_present)||
+     (page_code4 == lcd.page_present)||
+       (page_sleep_note == lcd.page_present))
+  {
+    *author = 0;
+  }
+  else
+  {
+    *author = 1;
+  }
+  return 0;
+}
+
+/******************************************************************************
+    功能说明：无
+    输入参数：无
+    输出参数：无
+    返 回 值：无
+*******************************************************************************/
+int set_author_limit(void)
+{
+    c_bAuthorityAlarm = 1;
+    return 0;
+}
+/******************************************************************************
+    功能说明：无
+    输入参数：无
+    输出参数：无
+    返 回 值：无
+*******************************************************************************/
+int check_author_limit(void)
+{
+    if(c_bAuthorityAlarm)
+    {
+      c_bAuthorityAlarm = 0;
+      return 1;
+    }
+    return 0;
+}
+
+/******************************************************************************
+    功能说明：无
+    输入参数：无
+    输出参数：无
+    返 回 值：无
+*******************************************************************************/
+int jump_pour_page(void)
+{
+    if((page_startup == lcd.page_present)||
+        (page_code1 == lcd.page_present)||
+        (page_lock == lcd.page_present)||
+        (page_code4 == lcd.page_present)||
+        (page_sleep_note == lcd.page_present))
+    {
+        return 0;
+    }
+    else
+    {
+        at_cmd("page pour");
+        return 0;
+    }
+}
+
+/******************************************************************************
+    功能说明：无
+    输入参数：无
+    输出参数：无
+    返 回 值：无
+*******************************************************************************/
+int jump_page_lackpressure(void)
+{
+    if((page_startup == lcd.page_present)||
+        (page_code1 == lcd.page_present)||
+        (page_lock == lcd.page_present)||
+        (page_code4 == lcd.page_present)||
+        (page_sleep_note == lcd.page_present))
+    {
+        return 0;
+    }
+    else
+    {
+        at_cmd("page lackpressure");
+        return 0;
+    }
+}
+
+
+/******************************************************************************
+    功能说明：无
+    输入参数：无
+    输出参数：无
+    返 回 值：无
+*******************************************************************************/
+int jump_page_overpressure(void)
+{
+    if((page_startup == lcd.page_present)||
+        (page_code1 == lcd.page_present)||
+        (page_lock == lcd.page_present)||
+        (page_code4 == lcd.page_present)||
+        (page_sleep_note == lcd.page_present))
+    {
+        return 0;
+    }
+    else
+    {
+        at_cmd("page overpressure");
+        return 0;
+    }
 }
 
 /******************************************************************************
@@ -463,10 +583,10 @@ static void deal_page_home(void)
         at_cmd(buf);
     }
 
-    if(0)
-    {//如果任意出酒键按下
-        at_cmd("page pour");
-    }
+//    if(0)
+//    {//如果任意出酒键按下
+//        at_cmd("page pour");
+//    }
 }
 
 /******************************************************************************
@@ -609,147 +729,85 @@ static void deal_page_pour(void)
     char *str_bottle3 = "bottle3";
     char *str_bottle4 = "bottle4";
     char buf[32];
+    static int ms_count = 0; 
 
     //根据按下的出酒按键指示的瓶号,发送对应瓶号的点击指令
     if (lcd.page_last != lcd.page_present)
     {
-        //判断瓶号
-        //---------
-
-        //---------
-        if(0)
-        {//例:按下2号瓶
-            at_cmd("click bt0,0");
-        }
-        else if(1)
+      	//酒位
+        switch(divid_cup_info.place)
         {
-            at_cmd("click bt1,0");
-        }
-        else if(0)
+	    case 1:
+	    	at_cmd("click bt0,0");
+	    	break;
+	    case 2:
+	    	at_cmd("click bt1,0");
+	    	break;
+	    case 3:
+	    	at_cmd("click bt2,0");
+	    	break;
+	    case 4:
+	    	at_cmd("click bt3,0");
+	    	break;
+	    default:
+	      	break;
+	}
+	// 小中大杯
+	switch(divid_cup_info.bebe)
         {
-            at_cmd("click bt2,0");
-        }
-        else if(0)
-        {
-            at_cmd("click bt3,0");
-        }
+	    case 1:
+	    	at_cmd("capacity.val=1");
+	    	break;
+	    case 2:
+	    	at_cmd("capacity.val=2");
+	    	break;
+	    case 3:
+	    	at_cmd("capacity.val=3");
+	    	break;
+	    default:
+	      	break;
+	}
+	//货号
+	sprintf(buf, "product.txt=\"%s\"", divid_cup_info.huohao);
+	at_cmd(buf);
+	memset(buf, 0, 32);
+	//vTaskDelay(1);
+	//小杯价格
+	sprintf(buf, "priceS.txt=\"%s\"", divid_cup_info.jiage_1);
+	at_cmd(buf);
+	memset(buf, 0, 32);
+	//vTaskDelay(1);
+	//中杯价格
+	sprintf(buf, "priceM.txt=\"%s\"", divid_cup_info.jiage_2);
+	at_cmd(buf);
+	memset(buf, 0, 32);
+	//vTaskDelay(1);
+	//大杯价格
+	sprintf(buf, "priceL.txt=\"%s\"", divid_cup_info.jiage_3);
+	at_cmd(buf);
+	memset(buf, 0, 32);
+	//vTaskDelay(1);
     }
-
-    if((frame.valid == TRUE)&&(frame.cmd == CMD_STR))
+	
+    // 余酒量500ms刷新
+    if(0 == ms_count)
     {
-        if(strcmp(frame.databuf, str_bottle1) == 0)
-        {
-            sprintf(buf, "product.txt=\"%s\"", str_product1);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-            vTaskDelay(1);
-            sprintf(buf, "priceS.txt=\"%s\"", str_priceS1);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-            vTaskDelay(1);
-            sprintf(buf, "priceM.txt=\"%s\"", str_priceM1);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-            vTaskDelay(1);
-            sprintf(buf, "priceL.txt=\"%s\"", str_priceL1);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-            vTaskDelay(1);
-            sprintf(buf, "restwine.txt=\"%s\"", str_restwine1);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-        }
-        else if(strcmp(frame.databuf, str_bottle2) == 0)
-        {
-            sprintf(buf, "product.txt=\"%s\"", str_product2);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-            vTaskDelay(1);
-            sprintf(buf, "priceS.txt=\"%s\"", str_priceS2);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-            vTaskDelay(1);
-            sprintf(buf, "priceM.txt=\"%s\"", str_priceM2);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-            vTaskDelay(1);
-            sprintf(buf, "priceL.txt=\"%s\"", str_priceL2);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-            vTaskDelay(1);
-            sprintf(buf, "restwine.txt=\"%s\"", str_restwine2);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-        }else if(strcmp(frame.databuf, str_bottle3) == 0)
-        {
-            sprintf(buf, "product.txt=\"%s\"", str_product3);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-            vTaskDelay(1);
-            sprintf(buf, "priceS.txt=\"%s\"", str_priceS3);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-            vTaskDelay(1);
-            sprintf(buf, "priceM.txt=\"%s\"", str_priceM3);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-            vTaskDelay(1);
-            sprintf(buf, "priceL.txt=\"%s\"", str_priceL3);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-            vTaskDelay(1);
-            sprintf(buf, "restwine.txt=\"%s\"", str_restwine3);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-        }else if(strcmp(frame.databuf, str_bottle4) == 0)
-        {
-            sprintf(buf, "product.txt=\"%s\"", str_product4);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-            vTaskDelay(1);
-            sprintf(buf, "priceS.txt=\"%s\"", str_priceS4);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-            vTaskDelay(1);
-            sprintf(buf, "priceM.txt=\"%s\"", str_priceM4);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-            vTaskDelay(1);
-            sprintf(buf, "priceL.txt=\"%s\"", str_priceL4);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-            vTaskDelay(1);
-            sprintf(buf, "restwine.txt=\"%s\"", str_restwine4);
-            at_cmd(buf);
-            memset(buf, 0, 32);
-        }
+	sprintf(buf, "restwine.txt=\"%s\"", divid_cup_info.bebe_ml);
+	at_cmd(buf);
     }
-
+    ms_count++;
+    if(5 == ms_count)
+    {
+      ms_count = 0;
+    }
+    
     //判断酒量是否不足
-    if(1)
+    if(divid_cup_info.yujiubuzu_flag)
     {//酒量不足
         at_cmd("empty.val=1");
         //清除酒量不足标志
         //---------
-
-        //---------
-    }
-
-    //判断压力是否正常
-    if(0)
-    {//超压
-        at_cmd("page overpressure");
-        //清除超压标志
-        //---------
-
-        //---------
-    }
-    else if(0)
-    {//欠压
-        at_cmd("page lackpressure");
-        //清除欠压标志
-        //---------
-
+	divid_cup_info.yujiubuzu_flag = 0;
         //---------
     }
 
@@ -965,11 +1023,7 @@ static void deal_page_lock(void)
         at_cmd(buf);
     }
 
-    //如果任意出酒头按下
-    //--------
-
-    //--------
-    if(0)
+    if(check_author_limit())
     {
         at_cmd("vis p0,1"); //显示锁屏提示
     }
@@ -1005,7 +1059,7 @@ static void deal_page_code4(void)
 *******************************************************************************/
 static void deal_page_sleep_note(void)
 {
-    if(0)//如果按下出酒键
+    if(check_author_limit())//如果按下出酒键
     {
         at_cmd("sleep=0");
     }
@@ -1420,7 +1474,7 @@ static void deal_page_wash2(void)
 
     static int last_status = 0;
     unsigned long *pTemp;
-    unsigned char bottle_num;
+    static unsigned char bottle_num;
 
 
     if((frame.valid == TRUE)&&(frame.cmd == CMD_STR))
@@ -1428,6 +1482,7 @@ static void deal_page_wash2(void)
         if(strcmp(frame.databuf, str_bottle) == 0)
         {
             last_status = 1;
+	    bottle_num = 0;
         }
     }
     if((frame.valid == TRUE)&&(frame.cmd == CMD_NUM)&&(last_status == 1))
@@ -1522,7 +1577,7 @@ static void deal_page_wash4(void)
 
     static int last_status = 0;
     unsigned long *pTemp;
-    unsigned char bottle_num;
+    static unsigned char bottle_num;
 
 
     if((frame.valid == TRUE)&&(frame.cmd == CMD_STR))
@@ -1530,6 +1585,7 @@ static void deal_page_wash4(void)
         if(strcmp(frame.databuf, str_bottle) == 0)
         {
             last_status = 1;
+	    bottle_num = 0;
         }
     }
     if((frame.valid == TRUE)&&(frame.cmd == CMD_NUM)&&(last_status == 1))
@@ -2415,27 +2471,8 @@ static int lcd_show(void)
     return 0;
 }
 
-/******************************************************************************
-    功能说明：无
-    输入参数：无
-    输出参数：无
-    返 回 值：无
-*******************************************************************************/
-int lcd_author_judge(void)
-{
-  if((page_startup == lcd.page_present)||
-     (page_code1 == lcd.page_present)||
-     (page_lock == lcd.page_present)||
-     (page_code4 == lcd.page_present)||
-       (page_sleep_note == lcd.page_present))
-  {
-    return -1;
-  }
-  else
-  {
-    return 0;
-  }
-}
+
+
 
 /******************************************************************************
     功能说明：无

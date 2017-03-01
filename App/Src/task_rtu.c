@@ -18,13 +18,13 @@
 #define RTU_JIUTOU_NUM  2
 #define RTU_TIAOYA_NUM  1
 
-#define RTU_JIUTOU_REG_DAT_NUM 20
-#define RTU_JIUTOU_REG_CTL_NUM 20
-#define RTU_JIUTOU_REG_ARG_NUM 20
+#define RTU_JIUTOU_REG_DAT_NUM 21
+#define RTU_JIUTOU_REG_CTL_NUM 21
+#define RTU_JIUTOU_REG_ARG_NUM 21
 
-#define RTU_TIAOYA_REG_DAT_NUM 20
-#define RTU_TIAOYA_REG_CTL_NUM 20
-#define RTU_TIAOYA_REG_ARG_NUM 20
+#define RTU_TIAOYA_REG_DAT_NUM 21
+#define RTU_TIAOYA_REG_CTL_NUM 21
+#define RTU_TIAOYA_REG_ARG_NUM 21
 
 
 
@@ -256,8 +256,8 @@ static int modbus_arg_0x06_frame_pack(char *txbuf, char rtu_addr,
     txbuf[index++] = (char)(reg_data);
 
     crc = usMBCRC16((unsigned char *)txbuf, index);
-    txbuf[index++] = (char)(crc >> 8);
     txbuf[index++] = (char)crc;
+    txbuf[index++] = (char)(crc >> 8);
 
     return index;
 }
@@ -389,7 +389,7 @@ static int rtu_jiutou_dat(char rtu_addr)
     char len;
     int ret;
 
-    len = modbus_frame_0x03_pack(buff, rtu_addr, 0x00, 20);
+    len = modbus_frame_0x03_pack(buff, rtu_addr, 0x00, 21);
     if (len > 0)
     {
         ret = modbus_frame_send(buff, len);
@@ -628,12 +628,12 @@ void task_rtu(void *pvParameters)
         //rtu_tiaoya_arg(0x0A);
 
         rtu_jiutou_dat(0x01);        
-        rtu_jiutou_ctl(0x01);
         rtu_jiutou_arg(0x01);
+	rtu_jiutou_ctl(0x01);
 
-        rtu_jiutou_dat(0x02);
-        rtu_jiutou_ctl(0x02);
+        rtu_jiutou_dat(0x02);  
         rtu_jiutou_arg(0x02);
+	rtu_jiutou_ctl(0x02);
         
         vTaskDelay(500);
     }
@@ -680,8 +680,10 @@ int rtu_jiutou_arg_set(char rtu_addr, unsigned short jt_arg_cmd,
 
     if (index < RTU_JIUTOU_REG_ARG_NUM)
     {
-        rtu.reg_jt_arg[rtu_addr - 1][index++] = reg_jt_arg;
+        rtu.reg_jt_arg[rtu_addr - 1][index] = reg_jt_arg;
+	rtu.jt_arg_cmd[rtu_addr - 1][index++] = jt_arg_cmd;
         rtu.jt_arg_cmd_idx[rtu_addr - 1] = index;
+		
         return 0;
     }
 

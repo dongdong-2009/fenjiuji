@@ -17,15 +17,15 @@
         <debug>1</debug>
         <option>
           <name>ExePath</name>
-          <state>APP\Exe</state>
+          <state>C:\fenjiuji\APP\Exe</state>
         </option>
         <option>
           <name>ObjPath</name>
-          <state>APP\Obj</state>
+          <state>C:\fenjiuji\APP\Obj</state>
         </option>
         <option>
           <name>ListPath</name>
-          <state>APP\List</state>
+          <state>C:\fenjiuji\APP\List</state>
         </option>
         <option>
           <name>GEndianMode</name>

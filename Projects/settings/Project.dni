@@ -18,7 +18,7 @@ TraceBufferSize=0x00010000
 TraceStallIfFIFOFull=0x00000000
 TracePortSize=0x00000004
 [DebugChecksum]
-Checksum=1602271602
+Checksum=1789019554
 [Exceptions]
 StopOnUncaught=_ 0
 StopOnThrow=_ 0
@@ -32,9 +32,9 @@ MixedMode=1
 OverrideDefaultClocks=0
 CpuClock=72000000
 ClockAutoDetect=1
-ClockWanted=7500000
-JtagSpeed=6666666
-Prescaler=11
+ClockWanted=6000000
+JtagSpeed=6000000
+Prescaler=12
 TimeStampPrescIndex=0
 TimeStampPrescData=0
 PcSampCYCTAP=1
@@ -53,6 +53,8 @@ Fmt3=RTC_DateTypeDef-Year	4	0
 Fmt4=RTC_TypeDef-CNTH	4	0
 Fmt5=RTC_TypeDef-CNTL	4	0
 Fmt6=RTC_TypeDef-DIVL	3	0
+Fmt7=struct lcd_str-page_last	4	0
+Fmt8=struct lcd_str-page_present	4	0
 [array_types]
 Fmt0=char[1024]	4	0
 Fmt1=char[1200]	5	0
@@ -147,14 +149,15 @@ ProbeSetup0=2 1 1 2 0 0
 [Disassemble mode]
 mode=0
 [Breakpoints2]
-Bp0=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\Drivers\BSP\Src\esp8266.c}.713.3" 0 0 1 "" 0 "" 0
-Bp1=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\Drivers\BSP\Src\esp8266.c}.715.3" 0 0 1 "" 0 "" 0
-Bp2=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\Drivers\BSP\Src\esp8266.c}.723.2" 0 0 1 "" 0 "" 0
-Bp3=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\App\Src\ymodem.c}.241.3" 0 0 1 "" 0 "" 0
-Bp4=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\App\Src\task_wifi.c}.329.4" 0 0 1 "" 0 "" 0
-Count=5
+Bp0=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\App\Src\divid_cap.c}.1237.3" 0 0 1 "" 0 "" 0
+Bp1=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\App\Src\divid_cap.c}.1266.2" 0 0 1 "" 0 "" 0
+Bp2=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\App\Src\divid_cap.c}.1249.4" 0 0 1 "" 0 "" 0
+Bp3=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\App\Src\divid_cap.c}.1178.2" 0 0 1 "" 0 "" 0
+Count=4
 [Aliases]
 A0=_ "D:\fenjiuji_pro\code\fenjiuji\Projects\STM3210C_EVAL\Applications\FreeRTOS\FreeRTOS_ThreadCreation\Src\main.c" ""
 A1=_ "D:\fenjiuji_pro\code\fenjiuji\Projects\STM3210C_EVAL\Applications\FreeRTOS\FreeRTOS_ThreadCreation\Src\task_lcd.c" ""
-Count=2
+A2=_ "E:\fenjiu_pro\fenjiuji-2017-02-25\fenjiuji\Drivers\CMSIS\Device\startup_stm32f103xe.s" ""
+A3=_ "E:\fenjiuji\Drivers\CMSIS\Device\startup_stm32f103xe.s" ""
+Count=4
 SuppressDialog=0
